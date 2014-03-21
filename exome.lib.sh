@@ -2,9 +2,10 @@
 
 #-------------------------------------------------------------------------------------------------------
 #Function to get input file name from a list of files in an array job
-funcFilfromList(){
+funcFilfromList() {
 ChecList=${InpFil##*.}
 if [[ $ChecList == "list" ]];then
+	echo $ChecList
 	InpFil=$(head -n $SGE_TASK_ID $InpFil | tail -n 1)
 fi
 }
@@ -20,6 +21,7 @@ echo " Job ID: "$JOB_ID >> $TmpLog
 if [[ ! -z $SGE_TASK_ID ]]; then echo " Array task ID: "$SGE_TASK_ID >> $TmpLog; fi
 echo " Input File: "$InpFil >> $TmpLog
 if [[ ! -z $BamFil ]]; then echo " Bam File: "$BamFil >> $TmpLog; fi
+if [[ ! -z $BamNam ]]; then echo " Base name for outputs: $BamNam" >> $TmpLog; fi
 if [[ ! -z $Chr ]]; then echo " Chromosome: "$Chr >> $TmpLog; fi
 echo "----------------------------------------------------------------" >> $TmpLog
 }

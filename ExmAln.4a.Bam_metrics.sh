@@ -40,6 +40,7 @@ source $EXOMPPLN/exome.lib.sh #library functions begin "func"
 if [[ -z $GCmet ]] && [[ -z $ISmet ]] && [[ -z $QDmet ]]; then #if no flags run all metrics
 	ALLmet="true"
 fi
+echo $ALLmet
 funcFilfromList
 BamFil=`readlink -f $InpFil` #resolve absolute path to bam
 BamNam=`basename ${BamFil/.bam/}` #a name to use for the various output files
@@ -47,8 +48,8 @@ BamNam=${BamNam/.list/}
 if [[ -z $LogFil ]];then
 	LogFil=$BamNam.BamMetrics.log # a name for the log file
 fi
-TmpLog=$BamNam.GCtemp #temporary log file 
-TmpDir=$BamNam.GCtempdir #temp directory for java machine
+TmpLog=$BamNam.BamMettemp #temporary log file 
+TmpDir=$BamNam.BamMettempdir #temp directory for java machine
 mkdir -p $TmpDir
 
 #Start Log
@@ -56,20 +57,20 @@ ProcessName="Start Get GC metrics with Picard" # Description of the script - use
 funcWriteStartLog
 
 #Get GC metrics with Picard
-if [[ $Allmet == "true" ]] || [[ $GCmet == "true" ]]; then
+if [[ $ALLmet == "true" ]] || [[ $GCmet == "true" ]]; then
 	StepName="Get GC Metrics with Picard" # Description of this step - used in log
 	StepCmd="java -Xmx4G -Djava.io.tmpdir=$TmpDir -jar $PICARD/CollectGcBiasMetrics.jar INPUT=$BamFil  OUTPUT=$BamNam.GCbias_detail CHART=$BamNam.GCbias.pdf REFERENCE_SEQUENCE=$REF VALIDATION_STRINGENCY=SILENT WINDOW_SIZE=200" #command to be run
 	funcRunStep
 fi
 #Get Insert size metrics with Picard
-if [[ $Allmet == "true" ]] || [[ $ISmet == "true" ]]; then
+if [[ $ALLmet == "true" ]] || [[ $ISmet == "true" ]]; then
 	StepName="Get Insert Size Metrics with Picard" # Description of this step - used in log
 	StepCmd="java -Xmx4G -Djava.io.tmpdir=$TmpDir -jar $PICARD/CollectInsertSizeMetrics.jar INPUT=$BamFil  OUTPUT=$BamNam.InsertSize_detail HISTOGRAM_FILE=$BamNam.InsertSize.pdf VALIDATION_STRINGENCY=SILENT" #command to be run
 	funcRunStep
 fi
 
 #Quality Score Distribution
-if [[ $Allmet == "true" ]] || [[ $QDmet == "true" ]]; then
+if [[ $ALLmet == "true" ]] || [[ $QDmet == "true" ]]; then
 	StepName="Get Quality Score Distribution from BAM file using PICARD" # Description of this step - used in log
 	StepCmd="java -Xmx4G -Djava.io.tmpdir=$TmpDir -jar $PICARD/QualityScoreDistribution.jar INPUT=$BamFil OUTPUT=$BamNam.QualityDistr CHART_OUTPUT=$BamNam.QualityScoreDistr.pdf REFERENCE_SEQUENCE=$REF VALIDATION_STRINGENCY=SILENT" #command to be run
 	funcRunStep

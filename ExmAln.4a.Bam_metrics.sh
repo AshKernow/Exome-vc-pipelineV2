@@ -40,7 +40,6 @@ source $EXOMPPLN/exome.lib.sh #library functions begin "func"
 if [[ -z $GCmet ]] && [[ -z $ISmet ]] && [[ -z $QDmet ]]; then #if no flags run all metrics
 	ALLmet="true"
 fi
-echo $ALLmet
 funcFilfromList
 BamFil=`readlink -f $InpFil` #resolve absolute path to bam
 BamNam=`basename ${BamFil/.bam/}` #a name to use for the various output files
@@ -48,7 +47,7 @@ BamNam=${BamNam/.list/}
 if [[ -z $LogFil ]];then
 	LogFil=$BamNam.BamMetrics.log # a name for the log file
 fi
-TmpLog=$BamNam.BamMettemp #temporary log file 
+TmpLog=$BamNam.BamMettemp.log #temporary log file 
 TmpDir=$BamNam.BamMettempdir #temp directory for java machine
 mkdir -p $TmpDir
 

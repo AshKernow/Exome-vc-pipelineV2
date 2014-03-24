@@ -1,6 +1,6 @@
 #!/bin/bash
-#$ -cwd -pe smp 6 -l mem=2G,time=1:: -N BamBWABam
-# -cwd -l mem=1G,time=:10: -N BamBWABam
+#$ -cwd -pe smp 6 -l mem=2G,time=6:: -N BamBWABam
+
 #This script takes a bam file and reverts it to sam format and then realigns with BWA mem
 #	InpFil - (required) - Path to Bam file to be aligned. Alternatively a file with a list of bams can be provided and the script run in an array job. List file name must end ".list"
 #	RefFiles - (required) - shell file to export variables with locations of reference files and resource directories; see list below
@@ -18,17 +18,30 @@
 
 ## This file also require exome.lib.sh - which contains various functions used throughout my Exome analysis scripts; this file should be in the same directory as this script
 
+## Note that htscmd bam2fq will generate a warning:
+##    [W::bam_hdr_read] EOF marker is absent. The input is probably truncated.
+## This is not a problem, it is just a bug related to piping the stdin as the input, it can be ignored
 ###############################################################
+
+usage="
+ExmAln.1b.ReAlign_Bam_with_BWAmem.sh -i <InputFile> -r <reference_file> -l <logfile> -P
+
+	 -i (required) - Path to Bam file to be aligned or \".list\" file containing a multiple paths
+	 -r (required) - shell file to export variables with locations of reference files and resource directories
+	 -l (optional) - Log file
+	 -P (flag) - Initiate exome analysis pipeline after completion of script
+	 -H (flag) - echo this message and exit
+"
 
 #get arguments
 PipeLine="false"
-while getopts i:r:n:l:P opt; do
+while getopts i:r:l:PH opt; do
 	case "$opt" in
 		i) InpFil="$OPTARG";;
 		r) RefFil="$OPTARG";; 
-		n) BamNam="$OPTARG";; 
 		l) LogFil="$OPTARG";;
 		P) PipeLine="true";;
+		H) echo "$usage"; exit;;
 	esac
 done
 
@@ -45,12 +58,17 @@ BamNam=${BamNam/.bam/} # a name for the output files
 if [[ -z $LogFil ]];then
 	LogFil=$BamNam.BbB.log # a name for the log file
 fi
-AlnDir=$BamNam.align # directory in which processing will be done
-AlnFil=$BamNam.bwamem.bam #filename for output file
-DdpFil=$BamNam.bwamem.mkdup.bam #filename for file with PCR duplicates marked
+AlnDir=wd.$BamNam.align # directory in which processing will be done
+AlnFil=$BamNam.bwamem.bam #filename for bwa-mem aligned file
+SngFil=$BamNam.singletons #output file for the singletons to be dumped to
+SrtFil=$BamNam.bwamem.sorted.bam #output file for sorted bam
+DdpFil=$BamNam.bwamem.mkdup.bam #output file with PCR duplicates marked
+FlgStat=$BamNam.bwamem.flagstat #output file for bam flag stats
+IdxStat=$BamNam.idxstats #output file for bam index stats
+TmpLog=$LogFil.BbB.temp.log #temporary log file
+TmpDir=$BamNam.javatempdir
 mkdir -p $AlnDir # create working directory
 cd $AlnDir # move into working directory
-TmpLog=$LogFil.BbB.temp.log #use TmpLog for LogFil - for consistency with other exome analysis scripts
 
 #start log
 ProcessName="Align with BWA"
@@ -68,12 +86,33 @@ if [[ $RgHeader == "" ]]||[[ $(echo "$RgHeader" | wc -l) -gt 1 ]]; then #check t
 fi
 
 ###Align using BWA mem algorithm
+# use HTSlib to shuffle the bam | then tranform it to an interleaved fastq discarding an singletons to a separate file as they mess up the interleaving | transform sam back to bam
 StepName="Align with BWA mem"
-StepCmd="htscmd bamshuf -uOn 128 $BamFil tmp | htscmd bam2fq -a - | gzip | bwa mem -M -R \"$RgHeader\" -t 6 -p $REF - | htscmd samview -bS - > $AlnFil"
-#Stepcmd="bamshuf -uOn 128 aln_reads.bam tmp | htscmd bam2fq -a - | gzip > interleaved_reads.fq.gz"
-#StepCmd="samtools bamshuf -Ou $BamFil | samtools bam2fq - | bwa mem -M -R \"$RgHeader\" -t 6 -p $REF - | samtools view -bS - > $AlnFil"
+StepCmd="htscmd bamshuf -uOn 128 $BamFil tmp | htscmd bam2fq -s $SngFil -aO - | gzip | bwa mem -M -R \"$RgHeader\" -t 6 -p $REF - | htscmd samview -bS - > $AlnFil"
+funcRunStep
+
+#Sort the bam file by coordinate
+StepName="Sort Bam using PICARD"
+StepCmd="java -Xmx4G -Djava.io.tmpdir=$TmpDir -jar $PICARD/SortSam.jar INPUT=$AlnFil OUTPUT=$SrtFil SORT_ORDER=coordinate CREATE_INDEX=TRUE"
+funcRunStep
+rm $AlnFil
+
+#Mark the duplicates
+StepName="Mark PCR Duplicates using PICARD"
+StepCmd="java -Xmx4G -Djava.io.tmpdir=$TmpDir -jar $PICARD/MarkDuplicates.jar INPUT=$SrtFil OUTPUT=$DdpFil METRICS_FILE=$DdpFil.dup.metrics.txt CREATE_INDEX=TRUE"
+funcRunStep
+rm $SrtFil ${SrtFil/bam/bai}
+
+#Get flagstat
+StepName="Output flag stats using Samtools"
+StepCmd="samtools flagstat $DdpFil > $FlgStat"
+funcRunStep
+
+#get index stats
+StepName="Output idx stats using Samtools"
+StepCmd="samtools idxstats $DdpFil > $IdxStat"
 funcRunStep
 
 #Final CleanUp
 funcWriteEndLog
-rm $TmpLog
+rm $TmpLog $TmpDir

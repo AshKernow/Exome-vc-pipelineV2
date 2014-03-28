@@ -6,6 +6,7 @@
 #	InpFil - (required) - Path to Bam file to be realigned
 #	RefFiles - (required) - shell file to export variables with locations of reference files, jar files, and resource directories; see list below
 #	LogFil - (optional) - File for logging progress
+#	TgtBed - (optional) - Exome capture kit targets bed file (must end .bed for GATK compatability) - only required if calling pipeline
 #	Flag - A - AllowMisencoded - see GATK manual (https://www.broadinstitute.org/gatk/gatkdocs/org_broadinstitute_sting_gatk_CommandLineGATK.html#--allow_potentially_misencoded_quality_scores), causes GATK to ignore abnormally high quality scores that would otherwise indicate that the quality score encoding was incorrect
 #	Flag - P - PipeLine - call the next step in the pipeline at the end of the job
 #	Flag - B - BadET - prevent GATK from phoning home
@@ -34,6 +35,7 @@ ExmAln.8a.DepthofCoverage.sh -i <InputFile> -r <reference_file> -t <targetfile> 
 	 -i (required) - Path to Bam file to be aligned or \".list\" file containing a multiple paths
 	 -r (required) - shell file to export variables with locations of reference files and resource directories
 	 -l (optional) - Log file
+	 -t (optional) - Exome capture kit targets or other genomic intervals bed file (must end .bed for GATK compatability); this file is required if calling the pipeline but otherwise can be omitted
 	 -P (flag) - Call next step of exome analysis pipeline after completion of script
 	 -A (flag) - AllowMisencoded - see GATK manual
 	 -B (flag) - Prevent GATK from phoning home
@@ -45,11 +47,12 @@ PipeLine="false"
 BadEt="false"
 
 #get arguments
-while getopts i:r:l:PABH opt; do
+while getopts i:r:l:t:PABH opt; do
 	case "$opt" in
 		i) InpFil="$OPTARG";;
 		r) RefFil="$OPTARG";; 
 		l) LogFil="$OPTARG";;
+		t) TgtBed="$OPTARG";; 
 		P) PipeLine="true";;
 		A) AllowMisencoded="true";;
 		B) BadET="true";;
@@ -122,6 +125,13 @@ funcRunStep
 
 #generate realigned file list
 find `pwd` | grep -E bam$ | grep $RalDir | sort -V > $RalLst
+
+#Call next step
+NextJob="Generate Base Quality Score Recalibration table"
+QsubCmd="qsub $EXOMPPLN/ExmAln.5.GenerateBQSRTable.sh -i $RalLst -r $RefFil -t $TgtBed -l $LogFil -P"
+if [[ $AllowMisencoded == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
+if [[ $BadET == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
+funcPipeLine
 
 #End Log
 funcWriteEndLog

@@ -109,6 +109,14 @@ StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
 funcGatkAddArguments
 funcRunStep
 
+
+#Call next step
+NextJob="Get Depth of Coverage Statistics"
+QsubCmd="qsub $EXOMPPLN/ExmAln.8a.DepthofCoverage.shh -i $BamFil -r $RefFil -t $TgtBed -l $LogFil -P"
+if [[ $AllowMisencoded == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
+if [[ $BadET == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
+funcPipeLine
+
 #End Log
 funcWriteEndLog
 #Clean up

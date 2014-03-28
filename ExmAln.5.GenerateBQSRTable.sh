@@ -34,7 +34,7 @@ ExmAln.8a.DepthofCoverage.sh -i <InputFile> -r <reference_file> -t <targetfile> 
 
 	 -i (required) - Path to Bam file to be aligned or \".list\" file containing a multiple paths
 	 -r (required) - shell file to export variables with locations of reference files and resource directories
-	 -t (required) - Exome capture kit targets bed file (must end .bed for GATK compatability)
+	 -t (required) - Exome capture kit targets or other genomic intervals bed file (must end .bed for GATK compatability)
 	 -l (optional) - Log file
 	 -P (flag) - Call next step of exome analysis pipeline after completion of script
 	 -A (flag) - AllowMisencoded - see GATK manual
@@ -72,9 +72,7 @@ BamNam=`basename ${BamFil/.bam/}` #a name to use for the various files
 BamNam=${BamNam/.list/} 
 TmpDir=$BamNam.GenBQSRjavdir #temp directory for java machine
 mkdir -p $TmpDir
-if [[ -z $LogFil ]];then
-	LogFil=$BamNam.GenBQSR.log # a name for the log file
-fi
+if [[ -z $LogFil ]];then LogFil=$BamNam.GenBQSR.log; fi # a name for the log file
 TmpLog=$LogFil.GenBQSR.log #temporary log file 
 RclTable=$BamFil.recal.table # output - base quality score recalibration table
 GatkLog=$BamNam.gatklog #a log for GATK to output to, this is then trimmed and added to the script log
@@ -88,7 +86,7 @@ StepName="Create recalibration data file using GATK BaseRecalibrator" # Descript
 StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -T BaseRecalibrator 
  -R $REF 
- -L $TARGET 
+ -L $TgtBed 
  -I $BamFil 
  -knownSites $DBSNP 
  -knownSites $INDEL 
@@ -99,6 +97,13 @@ StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -log $GatkLog" #command to be run
 funcGatkAddArguments
 funcRunStep
+
+#Call next step
+NextJob="Apply Base Quality Score Recalibration"
+QsubCmd="qsub $EXOMPPLN/ExmAln.6.ApplyRecalibration.sh -i $BamFil -x $RclTable -r $RefFil -t $TgtBed -l $LogFil -P"
+if [[ $AllowMisencoded == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
+if [[ $BadET == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
+funcPipeLine
 
 #End Log
 funcWriteEndLog

@@ -9,11 +9,14 @@
 #	TgtBed - (required) - Exome capture kit targets bed file (must end .bed for GATK compatability)
 #	LogFil - (optional) - File for logging progress
 #	Flag - A - AllowMisencoded - see GATK manual, causes GATK to ignore abnormally high quality scores that would otherwise indicate that the quality score encoding was incorrect
+#	Flag - B - BadET - prevent GATK from phoning home
+#	Help - H - (flag) - get usage information
 
 #list of required vairables in reference file:
 # $TARGET - exome capture intervals bed file or other target file (must end ".bed")
 # $EXOMPPLN - directory containing exome analysis pipeline scripts
 # $GATK - GATK jar file 
+# $ETKEY - GATK key file for switching off the phone home feature, only needed if using the B flag
 
 #list of required tools:
 # java
@@ -24,16 +27,31 @@
 ###############################################################
 
 #set default arguments
+usage="
+ExmAln.8a.DepthofCoverage.sh -i <InputFile> -r <reference_file> -t <targetfile> -l <logfile> -GIQH
+
+	 -i (required) - Path to Bam file to be aligned or \".list\" file containing a multiple paths
+	 -r (required) - shell file to export variables with locations of reference files and resource directories
+	 -t (required) - Exome capture kit targets bed file (must end .bed for GATK compatability)
+	 -l (optional) - Log file
+	 -A (flag) - AllowMisencoded - see GATK manual
+	 -B (flag) - Prevent GATK from phoning home
+	 -H (flag) - echo this message and exit
+"
+
 AllowMisencoded="false"
+BadEt="false"
 
 #get arguments
-while getopts i:r:t:l:A opt; do
+while getopts i:r:t:l:ABH opt; do
 	case "$opt" in
 		i) InpFil="$OPTARG";;
 		r) RefFil="$OPTARG";; 
 		t) TgtBed="$OPTARG";; 
 		l) LogFil="$OPTARG";;
 		A) AllowMisencoded="true";;
+		B) BadET="true";;
+		H) echo "$usage"; exit;;
 	esac
 done
 

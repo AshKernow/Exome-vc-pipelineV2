@@ -10,6 +10,7 @@
 #	Flag - A - AllowMisencoded - see GATK manual, causes GATK to ignore abnormally high quality scores that would otherwise indicate that the quality score encoding was incorrect
 #	Flag - P - PipeLine - call the next step in the pipeline at the end of the job
 #	Flag - B - BadET - prevent GATK from phoning home
+#	Help - H - (flag) - get usage information
 
 #list of required vairables in reference file:
 # $REF - reference genome in fasta format - must have been indexed using 'bwa index ref.fa'
@@ -28,13 +29,25 @@
 ###############################################################
 
 #set default arguments
+usage="
+ExmAln.8a.DepthofCoverage.sh -i <InputFile> -r <reference_file> -t <targetfile> -l <logfile> -GIQH
+
+	 -i (required) - Path to Bam file to be aligned or \".list\" file containing a multiple paths
+	 -r (required) - shell file to export variables with locations of reference files and resource directories
+	 -t (required) - Exome capture kit targets bed file (must end .bed for GATK compatability)
+	 -l (optional) - Log file
+	 -P (flag) - Call next step of exome analysis pipeline after completion of script
+	 -A (flag) - AllowMisencoded - see GATK manual
+	 -B (flag) - Prevent GATK from phoning home
+	 -H (flag) - echo this message and exit
+"
+
 AllowMisencoded="false"
-FixMisencoded="false"
 PipeLine="false"
 BadEt="false"
 
 #get arguments
-while getopts i:r:t:l:PAFB opt; do
+while getopts i:r:t:l:PABH opt; do
 	case "$opt" in
 		i) InpFil="$OPTARG";;
 		r) RefFil="$OPTARG";; 
@@ -42,8 +55,8 @@ while getopts i:r:t:l:PAFB opt; do
 		l) LogFil="$OPTARG";;
 		P) PipeLine="true";;
 		A) AllowMisencoded="true";;
-		F) FixMisencoded="true";;
 		B) BadET="true";;
+		H) echo "$usage"; exit;;
 	esac
 done
 

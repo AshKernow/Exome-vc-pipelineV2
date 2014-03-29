@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -cwd -pe smp 6 -l mem=2G,time=24:: -N BamBWABam
+#$ -cwd -pe smp 6 -l mem=2G,time=12:: -N BamBWABam
 
 #This script takes a bam file and reverts it to sam format and then realigns with BWA mem
 #	InpFil - (required) - Path to Bam file to be aligned. Alternatively a file with a list of bams can be provided and the script run in an array job. List file name must end ".list"

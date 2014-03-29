@@ -20,6 +20,7 @@
 
 ###############################################################
 
+
 usage="
 ExmAln.3a.Bam_metrics.sh -i <InputFile> -r <reference_file> -l <logfile> -GIQH
 
@@ -28,7 +29,7 @@ ExmAln.3a.Bam_metrics.sh -i <InputFile> -r <reference_file> -l <logfile> -GIQH
 	 -l (optional) - Log file
 	 -G (flag) - get GC bias metrics
 	 -I (flag) - get Inset Size metrics
-	 -Q (flag) - get quality distribustion metrics
+	 -Q (flag) - get quality distribution metrics
 	 -H (flag) - echo this message and exit
 "
 

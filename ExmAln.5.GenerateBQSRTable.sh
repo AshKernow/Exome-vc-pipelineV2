@@ -1,9 +1,6 @@
 #!/bin/bash
 #$ -cwd -l mem=10G,time=2:: -N GenBQSR
 
-# -cwd -pe smp 6 -l mem=2G,time=6:: -N GenBQSR
-
-
 #This script takes a bam file or a list of bam files (filename must end ".list") and generates the base quality score recalibration table using GATK
 #	InpFil - (required) - Path to Bam file or a list of BamFiles to be recalibrated
 #	RefFiles - (required) - shell file to export variables with locations of reference files, jar files, and resource directories; see list below
@@ -97,7 +94,6 @@ StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -log $GatkLog" #command to be run
 funcGatkAddArguments
 funcRunStep
-# -nct 6
 
 
 #Call next step; if original file was a list of bams then need to call as an array job

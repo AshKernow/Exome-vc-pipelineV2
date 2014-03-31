@@ -63,9 +63,8 @@ BamNam=${BamNam/.list/}
 if [[ -z $LogFil ]];then
 	LogFil=$BamNam.BamMetrics.log # a name for the log file
 fi
-TmpLog=$BamNam.BamMettemp.log #temporary log file 
-TmpDir=$BamNam.BamMettempdir #temp directory for java machine
-mkdir -p $TmpDir
+TmpLog=$BamNam.BamMet.temp.log #temporary log file 
+TmpDir=$BamNam.BamMet.tempdir; mkdir -p $TmpDir #temporary directory
 
 #Start Log
 ProcessName="Start Get GC metrics with Picard" # Description of the script - used in log
@@ -83,6 +82,7 @@ if [[ $ALLmet == "true" ]] || [[ $GCmet == "true" ]]; then
  WINDOW_SIZE=200" #command to be run
 	funcRunStep
 fi
+
 #Get Insert size metrics with Picard
 if [[ $ALLmet == "true" ]] || [[ $ISmet == "true" ]]; then
 	StepName="Get Insert Size Metrics with Picard" # Description of this step - used in log
@@ -107,6 +107,3 @@ if [[ $ALLmet == "true" ]] || [[ $QDmet == "true" ]]; then
 fi
 #End Log
 funcWriteEndLog
-
-#cleanup
-rm -r $TmpLog $TmpDir

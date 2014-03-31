@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -cwd -pe smp 6 -l mem=2G,time=6:: -N LocRln
+#$ -cwd -pe smp 6 -l mem=2G,time=6:: -N MrgBam
 
 
 #This script a list of bam files and merges them into a single file. The filename of list MUST end ".list"
@@ -66,15 +66,11 @@ source $EXOMPPLN/exome.lib.sh #library functions begin "func"
 #Set Local Variables
 BamLst=`readlink -f $InpFil` #resolve absolute path to bam
 BamNam=`basename ${BamLst/.bam/}` #a name to use for the various files
-TmpDir=$BamNam.MrgBam.javdir #temp directory for java machine
-mkdir -p $TmpDir
-if [[ -z $LogFil ]];then
-	LogFil=$BamNam.MrgBam.log # a name for the log file
-fi
-TmpLog=$LogFil.MrgBam.$Chr.log #temporary log file
-GatkLog=$BamNam.gatklog #a log for GATK to output to, this is then trimmed and added to the script log
+if [[ -z $LogFil ]];then LogFil=$BamNam.MrgBam.log; fi # a name for the log file
 MrgFil=$BamNam.merged.bam #file to output
-
+GatkLog=$BamNam.MrgBam.gatklog #a log for GATK to output to, this is then trimmed and added to the script log
+TmpLog=$BamNam.MrgBam.temp.log #temporary log file
+TmpDir=$BamNam.MrgBams.tempdir; mkdir -p $TmpDir #temporary directory
 
 #Start Log
 ProcessName="Merge Bams with GATK" # Description of the script - used in log
@@ -92,16 +88,16 @@ funcRunStep
 
 #Call next step
 NextJob="Get Depth of Coverage Statistics"
-QsubCmd="qsub $EXOMPPLN/ExmAln.8a.DepthofCoverage.sh -i $MrgFil -r $RefFil -t $TgtBed -l $LogFil"
+QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.8a.DepthofCoverage.sh -i $MrgFil -r $RefFil -t $TgtBed -l $LogFil"
 if [[ $AllowMisencoded == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
 if [[ $BadET == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
 funcPipeLine
 NextJob="Get basic bam metrics"
-QsubCmd="qsub $EXOMPPLN/ExmAln.3a.Bam_metrics.sh -i $MrgFil -r $RefFil -l $LogFil -Q"
+QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.3a.Bam_metrics.sh -i $MrgFil -r $RefFil -l $LogFil -Q"
 funcPipeLine
 
 #End Log
 funcWriteEndLog
+
 #Clean up
-rm -r $TmpDir $TmpLog
 if [[ -s $MrgFil ]]; then rm $(cat $BamList); fi

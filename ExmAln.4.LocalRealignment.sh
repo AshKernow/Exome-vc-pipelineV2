@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -cwd -t 1-24 -pe smp 6 -l mem=2G,time=2:: -N LocRln
+#$ -cwd -t 1-24 -l mem=10G,time=2:: -N LocRln
 
 
 #This script takes a bam file andperfomrs local indel realignment using GATK, the script runs as an array across 24 Chromosomes
@@ -30,7 +30,7 @@
 
 #set default arguments
 usage="
-ExmAln.8a.DepthofCoverage.sh -i <InputFile> -r <reference_file> -t <targetfile> -l <logfile> -GIQH
+ExmAln.4.LocalRealignment.sh -i <InputFile> -r <reference_file> -t <targetfile> -l <logfile> -PABH
 
 	 -i (required) - Path to Bam file to be aligned or \".list\" file containing a multiple paths
 	 -r (required) - shell file to export variables with locations of reference files and resource directories
@@ -44,7 +44,7 @@ ExmAln.8a.DepthofCoverage.sh -i <InputFile> -r <reference_file> -t <targetfile> 
 
 AllowMisencoded="false"
 PipeLine="false"
-BadEt="false"
+BadET="false"
 
 #get arguments
 while getopts i:r:l:t:PABH opt; do
@@ -70,27 +70,21 @@ source $EXOMPPLN/exome.lib.sh #library functions begin "func"
 Chr=$SGE_TASK_ID
 Chr=${Chr/23/X}
 Chr=${Chr/24/Y}
-if [[ "$BUILD" = "hg19" ]]; then
-	Chr=chr$Chr
-fi
+if [[ "$BUILD" = "hg19" ]]; then Chr=chr$Chr; fi
 BamFil=`readlink -f $InpFil` #resolve absolute path to bam
 BamNam=`basename ${BamFil/.bam/}` #a name to use for the various files
-TmpDir=$BamNam.$Chr.LocRealignjavdir #temp directory for java machine
-mkdir -p $TmpDir
-if [[ -z $LogFil ]];then
-	LogFil=$BamNam.LocReal.log # a name for the log file
-fi
-TmpLog=$LogFil.LocReal.$Chr.log #temporary log file 
+if [[ -z $LogFil ]];then LogFil=$BamNam.LocReal.log; fi # a name for the log file
 RalDir=LocRealign.$BamNam #directory to collect individual chromosome realignments
 mkdir -p $RalDir
 RalLst=LocRealign.$BamNam.list #File listing paths to individual chromosome realignments
-StatFil=RealignStatus_$Chr.$JOB_ID.LocReal.stat #Status file to check if all chromosome are complete
-TgtFil=$RalDir/$BamNam.$Chr.target_intervals.list #temporary file for target intervals for the CHR
-realignedFile=$RalDir/realigned.$BamNam.Chr_$Chr.bam # the output - a realigned bam file for the CHR
-GatkLog=$BamNam.$Chr.LocRealign.gatklog #a log for GATK to output to, this is then trimmed and added to the script log
+RalFil=$RalDir/realigned.$BamNam.Chr_$Chr.bam # the output - a realigned bam file for the CHR
+TgtFil=$RalDir/$BamNam.$Chr.target_intervals.list #target intervals file created by GATK RealignerTargetCreator
+GatkLog=$BamNam.LocReal.$Chr.gatklog #a log for GATK to output to, this is then trimmed and added to the script log
+TmpLog=$LogFil.LocReal.$Chr.temp.log #temporary log file 
+TmpDir=$BamNam.LocReal.$Chr.tempdir; mkdir -p $TmpDir #temporary directory
 
 #Start Log
-ProcessName="Start Local Realignment around InDels on Chromosome $Chr" # Description of the script - used in log
+ProcessName="Local Realignment around InDels on Chromosome $Chr" # Description of the script - used in log
 funcWriteStartLog
 
 #Generate target file
@@ -103,7 +97,6 @@ StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -known $INDEL
  -known $INDEL1KG
  -o $TgtFil
- -nt 6
  -log $GatkLog" #command to be run
 funcGatkAddArguments
 funcRunStep
@@ -118,7 +111,7 @@ StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -L $Chr
  -known $INDEL
  -known $INDEL1KG
- -o $realignedFile
+ -o $RalFil
  -log $GatkLog" #command to be run
 funcGatkAddArguments
 funcRunStep
@@ -126,14 +119,17 @@ funcRunStep
 #generate realigned file list
 find `pwd` | grep -E bam$ | grep $RalDir | sort -V > $RalLst
 
-#Call next step
-NextJob="Generate Base Quality Score Recalibration table"
-QsubCmd="qsub $EXOMPPLN/ExmAln.5.GenerateBQSRTable.sh -i $RalLst -r $RefFil -t $TgtBed -l $LogFil -P"
-if [[ $AllowMisencoded == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
-if [[ $BadET == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
-funcPipeLine
+#Call next step - only the first job of the array calls the next job and it is called with a hold until all of the array jobs are finished
+if [[ $SGE_TASK_ID -eq 1 ]]; then
+	NextJob="Generate Base Quality Score Recalibration table"
+	QsubCmd="qsub -hold_jid $JOB_ID -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.5.GenerateBQSRTable.sh -i $RalLst -r $RefFil -t $TgtBed -l $LogFil -P"
+	if [[ $AllowMisencoded == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
+	if [[ $BadET == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
+	funcPipeLine
+fi
 
 #End Log
 funcWriteEndLog
+
 #Clean up
-rm -r $TmpDir $TmpLog $TgtFil
+rm $TgtFil

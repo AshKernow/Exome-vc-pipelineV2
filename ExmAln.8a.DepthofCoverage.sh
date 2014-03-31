@@ -64,14 +64,11 @@ source $EXOMPPLN/exome.lib.sh #library functions begin "func"
 #Set Local Variables
 funcFilfromList
 BamFil=`readlink -f $InpFil` #resolve absolute path to bam
-TmpDir=$BamFil.DoC.tempdir #temp directory for java machine
-mkdir -p $TmpDir
-if [[ -z $LogFil ]];then
-	LogFil=$BamFil.DoC.log # a name for the log file
-fi
-TmpLog=$BamFil.DoC.temp.log #temporary log file 
+if [[ -z $LogFil ]];then LogFil=$BamFil.DoC.log; fi # a name for the log file
 OutFil=$BamFil.DoC #prefix used in names of output files
-GatkLog=$BamFil.gatklog #a log for GATK to output to, this is then trimmed and added to the script log
+GatkLog=$BamNam.DoC.gatklog #a log for GATK to output to, this is then trimmed and added to the script log
+TmpLog=$BamNam.DoC.temp.log #temporary log file 
+TmpDir=$BamNam.DoC.tempdir; mkdir -p $TmpDir #temporary directory
 
 #Start Log
 ProcessName="Depth of Coverage with GATK" # Description of the script - used in log
@@ -85,5 +82,3 @@ funcRunStep
 
 #End Log
 funcWriteEndLog
-#Clean up
-rm -r $TmpDir $TmpLog

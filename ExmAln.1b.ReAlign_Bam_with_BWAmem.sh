@@ -28,7 +28,7 @@
 
 #set default arguments
 usage="
-ExmAln.1b.ReAlign_Bam_with_BWAmem.sh -i <InputFile> -r <reference_file> -l <logfile> -PH
+ExmAln.1b.ReAlign_Bam_with_BWAmem.sh -i <InputFile> -r <reference_file> -t <target intervals file> -l <logfile> -PH
 
 	 -i (required) - Path to Bam file to be aligned or \".list\" file containing a multiple paths
 	 -r (required) - shell file to export variables with locations of reference files and resource directories
@@ -61,13 +61,12 @@ source $EXOMPPLN/exome.lib.sh
 if [[ ! -e $InpFil ]] || [[ ! -e $RefFil ]]; then echo "Missing required arguments"; echo "$usage"; exit; fi
 
 #set local variables
-funcFilfromList
+funcFilfromList #if the input is a list get the appropriate input file for this job of the array --> $InpFil
 BamFil=`readlink -f $InpFil` #resolve absolute path to bam
 BamNam=`basename $BamFil` 
 BamNam=${BamNam/.bam/} # a name for the output files
 BamNam=${BamNam/.list/} 
 if [[ -z $LogFil ]]; then LogFil=$BamNam.BbB.log; fi # a name for the log file
-TmpLog=$LogFil.temp.log #temporary log file
 AlnDir=wd.$BamNam.align # directory in which processing will be done
 AlnFil=$BamNam.bwamem.bam #filename for bwa-mem aligned file
 SngFil=$BamNam.singletons #output file for the singletons to be dumped to
@@ -75,9 +74,11 @@ SrtFil=$BamNam.bwamem.sorted.bam #output file for sorted bam
 DdpFil=$BamNam.bwamem.mkdup.bam #output file with PCR duplicates marked
 FlgStat=$BamNam.bwamem.flagstat #output file for bam flag stats
 IdxStat=$BamNam.idxstats #output file for bam index stats
-TmpDir=$BamNam.javatempdir
 mkdir -p $AlnDir # create working directory
 cd $AlnDir # move into working directory
+TmpLog=$BamNam.BwB.temp.log #temporary log file
+TmpDir=$BamNam.BwB.tempdir; mkdir -p $TmpDir #temporary directory
+
 
 #start log
 ProcessName="Align with BWA"
@@ -133,6 +134,13 @@ StepName="Output idx stats using Samtools"
 StepCmd="samtools idxstats $DdpFil > $IdxStat"
 funcRunStep
 
-#Final CleanUp
+#Call next steps
+NextJob="Get basic bam metrics"
+QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.3a.Bam_metrics.sh -i $DdpFil -r $RefFil -l $LogFil"
+funcPipeLine
+NextJob="Run Local realignment"
+QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.4.LocalRealignment.sh -i $DdpFil -r $RefFil -t $TgtBed -l $LogFil -P"
+funcPipeLine
+
+#End Log
 funcWriteEndLog
-rm $TmpLog $TmpDir

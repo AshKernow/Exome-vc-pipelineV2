@@ -57,7 +57,7 @@ source $EXOMPPLN/exome.lib.sh
 if [[ ! -e $InpFil ]] || [[ ! -e $RefFil ]]; then echo "Missing required arguments"; echo "$usage"; exit; fi
 
 #Set local variablesfuncFilfromList
-funcFilfromList
+funcFilfromList #if the input is a list get the appropriate input file for this job of the array --> $InpFil
 BamFil=`readlink -f $InpFil` #resolve absolute path to bam
 BamNam=`basename $BamFil` 
 BamNam=${BamNam/.bam/} # a name for the output files
@@ -101,4 +101,4 @@ funcRunStep
 
 #Final CleanUp
 funcWriteEndLog
-rm $TmpLog
+rm -r $TmpLog $TmpDir

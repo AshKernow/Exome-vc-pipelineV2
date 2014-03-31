@@ -31,7 +31,7 @@
 usage="
 ExmAln.5.GenerateBQSRTable.sh -i <InputFile> -r <reference_file> -t <targetfile> -l <logfile> -PABH
 
-	 -i (required) - Path to Bam file to be aligned or \".list\" file containing a multiple paths
+	 -i (required) - Path to Bam file to be recalibrated or \".list\" file containing a multiple paths
 	 -r (required) - shell file to export variables with locations of reference files and resource directories
 	 -t (required) - Exome capture kit targets or other genomic intervals bed file (must end .bed for GATK compatability)
 	 -l (optional) - Log file

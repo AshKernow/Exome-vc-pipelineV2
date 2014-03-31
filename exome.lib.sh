@@ -82,6 +82,7 @@ qstat -j $JOB_ID | grep -E "usage *$SGE_TASK_ID:" >> $TmpLog #get cluster usage 
 echo "===========================================================================================" >> $TmpLog
 echo "" >> $TmpLog
 cat $TmpLog >> $LogFil
+rm -r $TmpLog $TmpDir
 }
 #-------------------------------------------------------------------------------------------------------
 
@@ -99,6 +100,7 @@ if [[ $BadET == "true" ]]; then StepCmd=$StepCmd" -et NO_ET -K $ETKEY"; fi
 # function for calling next step in pipeline
 funcPipeLine (){
 if [[ $PipeLine == "true" ]]; then
+	mkdir -p stdostde
 	echo "- Call $NextJob `date`:" >> $TmpLog
 	echo "    "$QsubCmd  >> $TmpLog
 	eval $QsubCmd >> $TmpLog

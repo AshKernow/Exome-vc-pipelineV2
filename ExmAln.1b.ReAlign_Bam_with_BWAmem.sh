@@ -16,6 +16,7 @@
 #list of required tools:
 # samtools <http://samtools.sourceforge.net/> <http://sourceforge.net/projects/samtools/files/>
 # bwa mem <http://bio-bwa.sourceforge.net/> <http://sourceforge.net/projects/bio-bwa/files/>
+# java <http://www.oracle.com/technetwork/java/javase/overview/index.html>
 # picard <http://picard.sourceforge.net/> <http://sourceforge.net/projects/picard/files/>
 # HTSlib <https://github.com/samtools/htslib> <https://github.com/samtools/htslib/archive/master.zip>
 
@@ -30,7 +31,7 @@
 usage="
 ExmAln.1b.ReAlign_Bam_with_BWAmem.sh -i <InputFile> -r <reference_file> -t <target intervals file> -l <logfile> -PH
 
-	 -i (required) - Path to Bam file to be aligned or \".list\" file containing a multiple paths
+	 -i (required) - Path to Bam file or \".list\" file containing a multiple paths
 	 -r (required) - shell file to export variables with locations of reference files and resource directories
 	 -l (optional) - Log file
 	 -t (optional) - Exome capture kit targets or other genomic intervals bed file (must end .bed for GATK compatability); this file is required if calling the pipeline but otherwise can be omitted
@@ -139,7 +140,7 @@ NextJob="Get basic bam metrics"
 QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.3a.Bam_metrics.sh -i $DdpFil -r $RefFil -l $LogFil"
 funcPipeLine
 NextJob="Run Local realignment"
-QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.4.LocalRealignment.sh -i $DdpFil -r $RefFil -t $TgtBed -l $LogFil -P"
+QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.4.LocalRealignment.sh -i $DdpFil -r $RefFil -t $TgtBed -l $LogFil -P -B"
 funcPipeLine
 
 #End Log

@@ -13,8 +13,8 @@
 # $PICARD - directory containing Picard jar files
 
 #list of required tools:
-# java
-# Picard
+# java <http://www.oracle.com/technetwork/java/javase/overview/index.html>
+# picard <http://picard.sourceforge.net/> <http://sourceforge.net/projects/picard/files/>
 
 ## This file also require exome.lib.sh - which contains various functions used throughout my Exome analysis scripts; this file should be in the same directory as this script
 
@@ -24,7 +24,7 @@
 usage="
 ExmAln.3a.Bam_metrics.sh -i <InputFile> -r <reference_file> -l <logfile> -GIQH
 
-	 -i (required) - Path to Bam file to be aligned or \".list\" file containing a multiple paths
+	 -i (required) - Path to Bam file or \".list\" file containing a multiple paths
 	 -r (required) - shell file to export variables with locations of reference files and resource directories
 	 -l (optional) - Log file
 	 -G (flag) - get GC bias metrics

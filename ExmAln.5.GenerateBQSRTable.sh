@@ -15,13 +15,14 @@
 # $REF - reference genome in fasta format - must have been indexed using 'bwa index ref.fa'
 # $INDEL - Gold standard INDEL reference from GATK
 # $INDEL1KG - INDEL reference from 1000 genomes
+# $DBSNP - dbSNP vcf from GATK
 # $EXOMPPLN - directory containing exome analysis pipeline scripts
 # $GATK - GATK jar file 
 # $ETKEY - GATK key file for switching off the phone home feature, only needed if using the B flag
 
 #list of required tools:
-# java
-# GATK
+# java <http://www.oracle.com/technetwork/java/javase/overview/index.html>
+# GATK <https://www.broadinstitute.org/gatk/> <https://www.broadinstitute.org/gatk/download>
 
 ## This file also require exome.lib.sh - which contains various functions used throughout my Exome analysis scripts; this file should be in the same directory as this script
 
@@ -31,7 +32,7 @@
 usage="
 ExmAln.5.GenerateBQSRTable.sh -i <InputFile> -r <reference_file> -t <targetfile> -l <logfile> -PABH
 
-	 -i (required) - Path to Bam file to be recalibrated or \".list\" file containing a multiple paths
+	 -i (required) - Path to Bam file or \".list\" file containing a multiple paths
 	 -r (required) - shell file to export variables with locations of reference files and resource directories
 	 -t (required) - Exome capture kit targets or other genomic intervals bed file (must end .bed for GATK compatability)
 	 -l (optional) - Log file

@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -cwd -pe smp 6 -l mem=2G,time=6:: -N MrgBam
+#$ -cwd -l mem=10G,time=6:: -N MrgBam
 
 
 #This script a list of bam files and merges them into a single file. The filename of list MUST end ".list"
@@ -13,13 +13,14 @@
 #	Help - H - (flag) - get usage information
 
 #list of required vairables in reference file:
+# $REF - reference genome in fasta format - must have been indexed using 'bwa index ref.fa'
 # $EXOMPPLN - directory containing exome analysis pipeline scripts
 # $GATK - GATK jar file 
 # $ETKEY - GATK key file for switching off the phone home feature, only needed if using the B flag
 
 #list of required tools:
-# java
-# GATK
+# java <http://www.oracle.com/technetwork/java/javase/overview/index.html>
+# GATK <https://www.broadinstitute.org/gatk/> <https://www.broadinstitute.org/gatk/download>
 
 ## This file also require exome.lib.sh - which contains various functions used throughout my Exome analysis scripts; this file should be in the same directory as this script
 
@@ -29,8 +30,8 @@
 usage="
 ExmAln.7.MergeBams.sh -i <InputFile> -r <reference_file> -t <targetfile> -l <logfile> -GIQH
 
-	 -i (required) - Path to Bam file to be aligned or \".list\" file containing a multiple paths
-   -r (required) - shell file to export variables with locations of reference files and resource directories
+	 -i (required) - Path to Bam file or \".list\" file containing a multiple paths
+	 -r (required) - shell file to export variables with locations of reference files and resource directories
 	 -t (required) - Exome capture kit targets bed file (must end .bed for GATK compatability)
 	 -l (optional) - Log file
 	 -P (flag) - Call next step of exome analysis pipeline after completion of script
@@ -79,7 +80,8 @@ funcWriteStartLog
 #Apply Recalibration
 StepName="Merge Bams using GATK PrintReads" # Description of this step - used in log
 StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
- -T PrintReads 
+ -T PrintReads
+ -R $REF
  -I $BamLst 
  -o $MrgFil
  -log $GatkLog" #command to be run
@@ -100,4 +102,4 @@ funcPipeLine
 funcWriteEndLog
 
 #Clean up
-if [[ -s $MrgFil ]]; then rm $(cat $BamList); fi
+if [[ -s $MrgFil ]]; then rm $(cat $BamLst); fi

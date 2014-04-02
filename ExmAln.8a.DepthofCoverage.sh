@@ -19,8 +19,8 @@
 # $ETKEY - GATK key file for switching off the phone home feature, only needed if using the B flag
 
 #list of required tools:
-# java
-# GATK
+# java <http://www.oracle.com/technetwork/java/javase/overview/index.html>
+# GATK <https://www.broadinstitute.org/gatk/> <https://www.broadinstitute.org/gatk/download>
 
 ## This file also require exome.lib.sh - which contains various functions used throughout my Exome analysis scripts; this file should be in the same directory as this script
 
@@ -30,7 +30,7 @@
 usage="
 ExmAln.8a.DepthofCoverage.sh -i <InputFile> -r <reference_file> -t <targetfile> -l <logfile> -GIQH
 
-	 -i (required) - Path to Bam file to be aligned or \".list\" file containing a multiple paths
+	 -i (required) - Path to Bam file or \".list\" file containing a multiple paths
 	 -r (required) - shell file to export variables with locations of reference files and resource directories
 	 -t (required) - Exome capture kit targets bed file (must end .bed for GATK compatability)
 	 -l (optional) - Log file

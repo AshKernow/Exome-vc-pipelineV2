@@ -54,6 +54,7 @@ if [[ $? == 1 ]]; then #check exit status and if error then...
 	echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" >> $TmpLog
 	echo "=================================================================" >> $TmpLog
 	funcTrimGATKlog
+	grep "ERROR MESSAGE" $SGE_STDERR_PATH | awk '{ print "\t\t"$0 }' >> $TmpLog
 	cat $TmpLog >> $LogFil
 	rm $TmpLog
 	exit 1

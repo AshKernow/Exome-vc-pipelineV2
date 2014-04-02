@@ -1,67 +1,118 @@
 #!/bin/bash
-#$ -cwd 
-# This script is an array job that will run the HaplotypeCaller in GVCF mode on a list of bam files to generate genomic VCFs, from which variants can then be called as per the GATK 3.0 pipeline. 
-#It is intended to be the beginning of the variant calling pipeline for GATK3.0, however, it can be used in isolation on a list of bam files just to generate gVCF files. 
-#It will run the HC on each bam file (one array job per file), and in pipeline mode it will then call the HaplotypeCaller again to joint call variants on all of the gVCFs produced. 
-#To use it to start the pipeline add the -P flag.
+#$ -cwd  -l mem=12G,time=2:: -N HCgVCF
 
-#load function librarys
-$(qstat -j $JOB_ID | grep "script_file" | awk '{print $2}')/exome.lib.sh
+#This script takes a bam file or a list of bam files (filename must end ".list") and runs variant calling using the HaplotypeCaller in gVCF mode
+#	InpFil - (required) - Path to Bam file to be aligned. Alternatively a file with a list of bams can be provided and the script run as an array job. List file name must end ".list"
+#	RefFiles - (required) - shell file to export variables with locations of reference files, jar files, and resource directories; see list below
+#	TgtBed - (optional) - Exome capture kit targets bed file (must end .bed for GATK compatability) - only required if calling pipeline
+#	LogFil - (optional) - File for logging progress
+#	Flag - A - AllowMisencoded - see GATK manual, causes GATK to ignore abnormally high quality scores that would otherwise indicate that the quality score encoding was incorrect
+#	Flag - P - PipeLine - call the next step in the pipeline at the end of the job
+#	Flag - B - BadET - prevent GATK from phoning home
+#	Help - H - (flag) - get usage information
+
+#list of required vairables in reference file:
+# $REF - reference genome in fasta format - must have been indexed using 'bwa index ref.fa'
+# $DBSNP - dbSNP vcf from GATK
+# $HAPMAP - hapmap vcf from GATKf
+# $EXOMPPLN - directory containing exome analysis pipeline scripts
+# $GATK - GATK jar file 
+# $ETKEY - GATK key file for switching off the phone home feature, only needed if using the B flag
+
+#list of required tools:
+# java <http://www.oracle.com/technetwork/java/javase/overview/index.html>
+# GATK <https://www.broadinstitute.org/gatk/> <https://www.broadinstitute.org/gatk/download>
+
+## This file also require exome.lib.sh - which contains various functions used throughout my Exome analysis scripts; this file should be in the same directory as this script
+
+###############################################################
+
+#set default arguments
+usage="
+ExmVC.1.HaplotypeCaller_GVCFmode.sh -i <InputFile> -r <reference_file> -t <targetfile> -l <logfile> -PABH
+
+	 -i (required) - Path to Bam file for variant calling or \".list\" file containing a multiple paths
+	 -r (required) - shell file to export variables with locations of reference files and resource directories
+	 -t (required) - Exome capture kit targets or other genomic intervals bed file (must end .bed for GATK compatability)
+	 -l (optional) - Log file
+	 -P (flag) - Call next step of exome analysis pipeline after completion of script
+	 -A (flag) - AllowMisencoded - see GATK manual
+	 -B (flag) - Prevent GATK from phoning home
+	 -H (flag) - echo this message and exit
+"
+
+AllowMisencoded="false"
+PipeLine="false"
+BadET="false"
 
 PipeLine="false"
-while getopts i:s:j:l:P opt; do
-  case "$opt" in
-      i) BamLst="$OPTARG";;   # tab delimited, two colums: <Full path to BamFil>[TAB]<Name for Sample/BamFil>
-      s) Settings="$OPTARG";; # settings file containing paths to tools and references
-	  j) JobNam="$OPTARG";; #name for entire job array
-      l) LogFil="$OPTARG";;   # name for log file for entire job
-	  P) PipeLine="true";; # call the next step in the pipeline at the end of the job
+while getopts i:r:l:t:PABH opt; do
+	case "$opt" in
+		i) InpFil="$OPTARG";;
+		r) RefFil="$OPTARG";; 
+		l) LogFil="$OPTARG";;
+		t) TgtBed="$OPTARG";; 
+		P) PipeLine="true";;
+		A) AllowMisencoded="true";;
+		B) BadET="true";;
+		H) echo "$usage"; exit;;
   esac
 done
 
 #load settings file
-. $Settings
+source $RefFil
+
+#Load script library
+source $EXOMPPLN/exome.lib.sh #library functions begin "func"
+
 
 #Set local Variables
-JobNum=$SGE_TASK_ID
-NumJobs=$(cat $BamLst | wc -l)
-JobNam=${JOB_NAME#*.}
-VcfDir=$JobNam"_gVCF" #Output Directory
-mkdir -p $VcfDir
-BamFil=$(tail -n+$JobNum $BamLst | head -n 1 | cut -f1)
-BamNam=$(tail -n+$JobNum $BamLst | head -n 1 | cut -f2)
-TmpLog=$LogFil.$BamNam.CallgVC.log
-TmpDir=$JobNam.$BamNam.gVC
-mkdir -p $TmpDir
-VcfFil=$VcfDir/$JobNam.$JobNum.gvcf #Output File
-
-
-infofields="-A AlleleBalance -A BaseQualityRankSumTest -A Coverage -A HaplotypeScore -A HomopolymerRun -A MappingQualityRankSumTest -A MappingQualityZero -A QualByDepth -A RMSMappingQuality -A SpanningDeletions -A FisherStrand" #Annotation fields to output into vcf files
+InpNam=`basename ${InpFil/.bam/}`
+InpNam=`basename ${InpNam/.list/}`
+VcfLst=HCgVCF.$InpNam.list #File listing paths to recalibrated bams
+VcfDir=$InpNam"_gVCF"; mkdir -p $VcfDir #Output Directory
+funcFilfromList #if the input is a list get the appropriate input file for this job of the array --> $InpFil
+BamFil=`readlink -f $InpFil` #resolve absolute path to bam
+BamNam=`basename $BamFil` 
+BamNam=${BamNam/.bam/} # a name for the output files
+BamNam=${BamNam/.list/} 
+if [[ -z $LogFil ]]; then LogFil=$BamNam.HCgVCF.log; fi # a name for the log file
+VcfFil=$VcfDir/BamNam.gvcf #Output File
+GatkLog=$BamNam.HCgVCF.gatklog #a log for GATK to output to, this is then trimmed and added to the script log
+TmpLog=$BamNam.HCgVCF.temp.log #temporary log file
+TmpDir=$BamNam.HCgVCF.tempdir; mkdir -p $TmpDir #temporary directory
+infofields="-A AlleleBalance -A BaseQualityRankSumTest -A Coverage -A HaplotypeScore -A HomopolymerRun -A MappingQualityRankSumTest -A MappingQualityZero -A QualByDepth -A RMSMappingQuality -A SpanningDeletions -A FisherStrand -A InbreedingCoeff" #Annotation fields to output into vcf files
 
 #Start Log File
-uname -a >> $TmpLog
-echo "Start genomic VCF generatation with GATK HaplotypeCaller - $0:`date`" >> $TmpLog
-echo "" >> $TmpLog
-echo "Job name: "$JOB_NAME >> $TmpLog
-echo "Job ID: "$JOB_ID >> $TmpLog
-echo "Output Directory: "$VcfDir >> $TmpLog
-echo "Input File: " $BamFil >> $TmpLog
-echo "Output File: "$VcfFil >> $TmpLog
-
+ProcessName="Genomic VCF generatation with GATK HaplotypeCaller" # Description of the script - used in log
+funcWriteStartLog
 
 ##Run Joint Variant Calling
-StepNam"gVCF generation with GATK HaplotypeCaller..." >> $TmpLog
-StepCmd="$JAVA7BIN -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR  -T HaplotypeCaller -R $REF -L $TARGET -nct $NumCores -I $BamFil --genotyping_mode DISCOVERY -stand_emit_conf 10 -stand_call_conf 30 --emitRefConfidence GVCF --variant_index_type LINEAR --variant_index_parameter 128000 -o $VcfDir/$VcfFil --dbsnp $DBSNP --comp:HapMapV3 $HpMpV3 $infofields -rf BadCigar"
+StepNam="gVCF generation with GATK HaplotypeCaller"
+StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
+ -T HaplotypeCaller
+ -R $REF
+ -L $TgtBed
+ -I $BamFil
+ --genotyping_mode DISCOVERY
+ -stand_emit_conf 10
+ -stand_call_conf 30
+ --emitRefConfidence GVCF
+ --variant_index_type LINEAR
+ --variant_index_parameter 128000
+ -o $VcfFil
+ -D $DBSNP
+ --comp:HapMapV3 $HpMpV3 
+ -pairHMM VECTOR_LOGLESS_CACHING
+ -rf BadCigar
+ $infofields" #command to be run
+funcGatkAddArguments
 funcRunStep
 
-#End log
-echo "Genomic VCF generatation with GATK HaplotypeCaller - $0:`date`" >> $TmpLog
-echo ""
-qstat -j $JOB_ID | grep -E "usage *$SGE_TASK_ID:" >> $TmpLog
-echo "" >> $TmpLog
-echo "===========================================================================================" >> $TmpLog
-echo "" >> $TmpLog
-cat $TmpLog >> $LogFil
+#Call next step
+#NextJob="Get basic bam metrics"
+#QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.3a.Bam_metrics.sh -i $RclLst -r $RefFil -l $LogFil -Q"
+#funcPipeLine
 
-#Clean up
-rm -r $TmpLog $TmpDir
+#End Log
+funcWriteEndLog

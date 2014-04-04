@@ -68,6 +68,7 @@ source $RefFil
 source $EXOMPPLN/exome.lib.sh #library functions begin "func"
 
 #Set Local Variables
+funcGetTargetFile
 InpNam=`basename ${InpFil/.bam/}`
 InpNam=`basename ${InpFil/.list/}`
 RclLst=Recalibrated.$InpNam.list #File listing paths to recalibrated bams

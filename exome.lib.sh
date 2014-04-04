@@ -1,6 +1,15 @@
 #Library of functions used throughout Exome analysis scriptd
 
 #-------------------------------------------------------------------------------------------------------
+#Function to set the target file location when given a code present as a variable in the reference file
+funcGetTargetFile (){
+	if [[ $TGTCODES == *$TgtBed* ]];then
+		eval TgtBed=\$$TgtBed
+	fi
+}
+#-------------------------------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------------------------------
 #Function to get input file name from a list of files in an array job
 funcFilfromList() {
 ChecList=${InpFil##*.}
@@ -23,6 +32,7 @@ echo " Input File: "$InpFil >> $TmpLog
 if [[ ! -z $BamFil ]]; then echo " Bam File: "$BamFil >> $TmpLog; fi
 if [[ ! -z $BamNam ]]; then echo " Base name for outputs: $BamNam" >> $TmpLog; fi
 if [[ ! -z $Chr ]]; then echo " Chromosome: "$Chr >> $TmpLog; fi
+if [[ ! -z $TgtBed ]]; then echo " Target Intervals File: "$TgtBed >> $TmpLog; fi
 echo "----------------------------------------------------------------" >> $TmpLog
 }
 #-------------------------------------------------------------------------------------------------------

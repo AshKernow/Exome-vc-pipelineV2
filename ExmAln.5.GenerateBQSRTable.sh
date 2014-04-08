@@ -67,6 +67,7 @@ source $RefFil
 source $EXOMPPLN/exome.lib.sh #library functions begin "func"
 
 #Set Local Variables
+funcGetTargetFile
 BamFil=`readlink -f $InpFil` #resolve absolute path to bam
 BamNam=`basename ${BamFil/.bam/}` #a name to use for the various files
 BamNam=${BamNam/.list/} 
@@ -85,8 +86,9 @@ StepName="Create recalibration data file using GATK BaseRecalibrator" # Descript
 StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -T BaseRecalibrator 
  -R $REF 
- -L $TgtBed 
  -I $BamFil 
+ -L $TgtBed 
+ -ip 50
  -knownSites $DBSNP 
  -knownSites $INDEL 
  -knownSites $INDEL1KG 

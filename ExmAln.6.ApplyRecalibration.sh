@@ -69,22 +69,35 @@ source $EXOMPPLN/exome.lib.sh #library functions begin "func"
 
 #Set Local Variables
 funcGetTargetFile
-InpNam=`basename ${InpFil/.bam/}`
-InpNam=`basename ${InpFil/.list/}`
+InpNam=`basename $InpFil | sed s/.bam// | sed s/.list//`
 RclLst=Recalibrated.$InpNam.list #File listing paths to recalibrated bams
-RclDir=$InpNam.recalibrated ; mkdir -p $RclDir # a directory to collect all of the recalibrated files in 
 funcFilfromList #if the input is a list get the appropriate input file for this job of the array --> $InpFil
 BamFil=`readlink -f $InpFil` #resolve absolute path to bam
 BamNam=`basename ${BamFil/.bam/}` #a name to use for the various files
 if [[ -z $LogFil ]];then LogFil=$BamNam.appBQSR.log; fi # a name for the log file
-RclFil=$RclDir/$BamNam.recalibrated.bam #file to output recalibrated bam to
+if [[ -z $SGE_TASK_ID ]]; then
+	RclFil=$BamNam.recalibrated.bam #file to output recalibrated bam to
+else
+	RclDir=$InpNam.recalibrated ; mkdir -p $RclDir # a directory to collect individual recalibrated files in 
+	RclFil=$RclDir/$BamNam.recalibrated.bam #file to output recalibrated bam to
+fi
+Chr=$(echo $SGE_TASK_ID | sed s/24/Y/ | sed s/23/T/)
+if [[ "$BUILD" = "hg19" ]]; then Chr=chr$Chr; fi
 GatkLog=$BamNam.AppBQSR.gatklog #a log for GATK to output to, this is then trimmed and added to the script log
 TmpLog=$BamNam.AppBQSR.temp.log #temporary log file
 TmpDir=$BamNam.AppBQSR.tempdir; mkdir -p $TmpDir #temporary directory
+TmpTar=TmpTarFil.$Chr.bed #temporary target file
 
 #Start Log
 ProcessName="Recalibrate Base Quality Scores with GATK" # Description of the script - used in log
 funcWriteStartLog
+
+#Make chromosome specific exome target file if necessary
+if [[ ! -z $SGE_TASK_ID ]]; then
+	grep -E "^$Chr[[:blank:]]" $TgtBed > $TmpTar
+else
+	TmpTar=$TgtBed
+fi
 
 #Apply Recalibration
 StepName="Apply recalibration using GATK PrintReads" # Description of this step - used in log
@@ -92,38 +105,39 @@ StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -T PrintReads 
  -R $REF 
  -I $BamFil 
- -BQSR $RclTab 
+ -BQSR $RclTab
+ -L $TmpTar
+ -ip 50
  -o $RclFil 
  --filter_mismatching_base_and_quals
  -log $GatkLog" #command to be run
 funcGatkAddArguments
 funcRunStep
 
-#generate realigned file list
-find `pwd` | grep -E bam$ | grep $RclDir | sort -V > $RclLst
-
 #Call next step
 #if the original input was a list then only first job of the array calls the script to merge all the bams and puts it on hold until entire array has finished
 #if there was only one bam supplied the depth of coverage and quality distribution scripts are called
 if [[ $SGE_TASK_ID -eq 1 ]]; then
-   NextJob="Merge Recalibrated Bams"
-   QsubCmd="qsub -hold_jid $JOB_ID -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.7.MergeBams.sh -i $RclLst -r $RefFil -t $TgtBed -l $LogFil -P"
-   if [[ $AllowMisencoded == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
-   if [[ $BadET == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
-   funcPipeLine
+	#generate realigned file list
+	find `pwd` | grep -E bam$ | grep $RclDir | sort -V > $RclLst
+	NextJob="Merge Recalibrated Bams"
+	QsubCmd="qsub -hold_jid $JOB_ID -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.7.MergeBams.sh -i $RclLst -r $RefFil -t $TgtBed -l $LogFil -P"
+	if [[ $AllowMisencoded == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
+	if [[ $BadET == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
+	funcPipeLine
 elif [[ -z $SGE_TASK_ID ]]; then
-   NextJob="Get Depth of Coverage Statistics"
-   QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.8a.DepthofCoverage.sh -i $RclLst -r $RefFil -t $TgtBed -l $LogFil"
-   if [[ $AllowMisencoded == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
-   if [[ $BadET == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
-   funcPipeLine
-   NextJob="Get basic bam metrics"
-   QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.3a.Bam_metrics.sh -i $RclLst -r $RefFil -l $LogFil -Q"
-   funcPipeLine
+	NextJob="Get Depth of Coverage Statistics"
+	QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.8a.DepthofCoverage.sh -i $RclFil -r $RefFil -t $TgtBed -l $LogFil"
+	if [[ $AllowMisencoded == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
+	if [[ $BadET == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
+	funcPipeLine
+	NextJob="Get basic bam metrics"
+	QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.3a.Bam_metrics.sh -i $RclFil -r $RefFil -l $LogFil -Q"
+	funcPipeLine
 fi
 
 #End Log
 funcWriteEndLog
 
 #Clean up
-if [[ -e $RclFil ]]; then rm $BamFil $RclTab; fi
+if [[ -e $RclFil ]]; then rm $BamFil; fi

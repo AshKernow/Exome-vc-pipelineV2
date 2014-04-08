@@ -1,8 +1,8 @@
 #!/bin/bash
-#$ -cwd -t 1-24 -l mem=10G,time=2:: -N LocRln
+#$ -cwd -l mem=10G,time=2:: -N LocRln
 
-
-#This script takes a bam file andperfomrs local indel realignment using GATK, the script runs as an array across 24 Chromosomes
+#This script takes a bam file and perfomrs local indel realignment using GATK
+#The script by default runs across the entire bam in a single pass, for increased speed it can split the job across chromosome. If you wish to run it as an array across 24 Chromosomes simply call the script with "-t 1-24"
 #	InpFil - (required) - Path to Bam file to be realigned
 #	RefFiles - (required) - shell file to export variables with locations of reference files, jar files, and resource directories; see list below
 #	LogFil - (optional) - File for logging progress
@@ -67,25 +67,33 @@ source $RefFil
 source $EXOMPPLN/exome.lib.sh #library functions begin "func"
 
 #Set Local Variables
-Chr=$SGE_TASK_ID
-Chr=${Chr/23/X}
-Chr=${Chr/24/Y}
-if [[ "$BUILD" = "hg19" ]]; then Chr=chr$Chr; fi
+funcGetTargetFile
 BamFil=`readlink -f $InpFil` #resolve absolute path to bam
 BamNam=`basename ${BamFil/.bam/}` #a name to use for the various files
 if [[ -z $LogFil ]];then LogFil=$BamNam.LocReal.log; fi # a name for the log file
-RalDir=LocRealign.$BamNam #directory to collect individual chromosome realignments
-mkdir -p $RalDir
+RalDir=LocRealign.$BamNam; mkdir -p $RalDir #directory to collect individual chromosome realignments
 RalLst=LocRealign.$BamNam.list #File listing paths to individual chromosome realignments
-RalFil=$RalDir/realigned.$BamNam.Chr_$Chr.bam # the output - a realigned bam file for the CHR
-TgtFil=$RalDir/$BamNam.$Chr.target_intervals.list #target intervals file created by GATK RealignerTargetCreator
-GatkLog=$BamNam.LocReal.$Chr.gatklog #a log for GATK to output to, this is then trimmed and added to the script log
-TmpLog=$LogFil.LocReal.$Chr.temp.log #temporary log file 
-TmpDir=$BamNam.LocReal.$Chr.tempdir; mkdir -p $TmpDir #temporary directory
+Chr=$(echo $SGE_TASK_ID | sed s/24/Y/ | sed s/23/T/)
+if [[ "$BUILD" = "hg19" ]]; then Chr=chr$Chr; fi
+if [[ ! -z $SGE_TASK_ID ]]; then ChrNam=".CHR_$Chr"; fi
+RalFil=$RalDir/realigned.$BamNam$ChrNam.bam # the output - a realigned bam file for the CHR
+TgtFil=$RalDir/$BamNam$ChrNam.target_intervals.list #target intervals file created by GATK RealignerTargetCreator
+GatkLog=$BamNam.LocReal$ChrNam.gatklog #a log for GATK to output to, this is then trimmed and added to the script log
+TmpLog=$LogFil.LocReal$ChrNam.temp.log #temporary log file 
+TmpDir=$BamNam.LocReal$ChrNam.tempdir; mkdir -p $TmpDir #temporary directory
+TmpTar=$RalDir/TmpTarFil$ChrNam.bed #temporary target file
 
 #Start Log
-ProcessName="Local Realignment around InDels on Chromosome $Chr" # Description of the script - used in log
+ProcessName="Local Realignment around InDels" # Description of the script - used in log
 funcWriteStartLog
+
+
+#Make chromosome specific exome target file if necessary
+if [[ ! -z $SGE_TASK_ID ]]; then
+	grep -E "^$Chr[[:blank:]]" $TgtBed > $TmpTar
+else
+	TmpTar=$TgtBed
+fi
 
 #Generate target file
 StepName="Create target interval file using GATK RealignerTargetCreator" # Description of this step - used in log
@@ -93,7 +101,8 @@ StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -T RealignerTargetCreator
  -R $REF
  -I $BamFil
- -L $Chr
+ -L $TmpTar
+ -ip 50
  -known $INDEL
  -known $INDEL1KG
  -o $TgtFil
@@ -108,7 +117,8 @@ StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -R $REF
  -I $BamFil
  -targetIntervals $TgtFil
- -L $Chr
+ -L $TmpTar
+ -ip 50
  -known $INDEL
  -known $INDEL1KG
  -o $RalFil
@@ -116,13 +126,17 @@ StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
 funcGatkAddArguments
 funcRunStep
 
-#generate realigned file list
-find `pwd` | grep -E bam$ | grep $RalDir | sort -V > $RalLst
-
-#Call next step - only the first job of the array calls the next job and it is called with a hold until all of the array jobs are finished
-if [[ $SGE_TASK_ID -eq 1 ]]; then
+#Call next step - if array by chromosome only the first job of the array calls the next job and it is called with a hold until all of the array jobs are finished
+if [[ $SGE_TASK_ID -eq 1 ]] || [[ -z $SGE_TASK_ID ]]; then
+	find `pwd` | grep -E bam$ | grep $RalDir | sort -V > $RalLst #generate realigned file list
 	NextJob="Generate Base Quality Score Recalibration table"
 	QsubCmd="qsub -hold_jid $JOB_ID -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.5.GenerateBQSRTable.sh -i $RalLst -r $RefFil -t $TgtBed -l $LogFil -P"
+	if [[ $AllowMisencoded == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
+	if [[ $BadET == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
+	funcPipeLine
+elif [[ -z $SGE_TASK_ID ]]; then
+	NextJob="Generate Base Quality Score Recalibration table"
+	QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.5.GenerateBQSRTable.sh -i $RalFil -r $RefFil -t $TgtBed -l $LogFil -P"
 	if [[ $AllowMisencoded == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
 	if [[ $BadET == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
 	funcPipeLine

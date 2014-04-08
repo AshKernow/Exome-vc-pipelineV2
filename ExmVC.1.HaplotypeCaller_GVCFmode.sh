@@ -77,7 +77,7 @@ BamNam=`basename $BamFil`
 BamNam=${BamNam/.bam/} # a name for the output files
 BamNam=${BamNam/.list/} 
 if [[ -z $LogFil ]]; then LogFil=$BamNam.HCgVCF.log; fi # a name for the log file
-VcfFil=$VcfDir/BamNam.gvcf #Output File
+VcfFil=$VcfDir/$BamNam.gvcf #Output File
 GatkLog=$BamNam.HCgVCF.gatklog #a log for GATK to output to, this is then trimmed and added to the script log
 TmpLog=$BamNam.HCgVCF.temp.log #temporary log file
 TmpDir=$BamNam.HCgVCF.tempdir; mkdir -p $TmpDir #temporary directory
@@ -105,7 +105,8 @@ StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  --comp:HapMapV3 $HpMpV3 
  -pairHMM VECTOR_LOGLESS_CACHING
  -rf BadCigar
- $infofields" #command to be run
+ $infofields
+ -log $GatkLog" #command to be run
 funcGatkAddArguments
 funcRunStep
 

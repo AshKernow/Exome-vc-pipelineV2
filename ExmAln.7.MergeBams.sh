@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -cwd -l mem=10G,time=6:: -N MrgBam
+#$ -cwd -l mem=12G,time=2:: -N MrgBam
 
 
 #This script a list of bam files and merges them into a single file. The filename of list MUST end ".list"
@@ -83,6 +83,8 @@ StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -T PrintReads
  -R $REF
  -I $BamLst 
+ -L $TgtBed
+ -ip 50
  -o $MrgFil
  -log $GatkLog" #command to be run
 funcGatkAddArguments
@@ -102,4 +104,4 @@ funcPipeLine
 funcWriteEndLog
 
 #Clean up
-if [[ -s $MrgFil ]]; then rm $(cat $BamLst); fi
+#if [[ -s $MrgFil ]]; then rm $(cat $BamLst); fi

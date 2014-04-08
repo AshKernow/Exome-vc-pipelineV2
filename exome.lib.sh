@@ -89,7 +89,9 @@ funcLogStepFinit
 #function to log the end of each script and transfer the contents of temporary log file to the main log file
 funcWriteEndLog () {
 echo "End "$ProcessName" $0:`date`" >> $TmpLog
-qstat -j $JOB_ID | grep -E "usage *$SGE_TASK_ID:" >> $TmpLog #get cluster usage stats
+SrchTrm="usage"
+if [[ $SGE_TASK_ID -gt 0 ]]; then SrchTrm=$SrchTrm" *$SGE_TASK_ID:"; fi
+qstat -j $JOB_ID | grep -E "$SrchTrm" >> $TmpLog #get cluster usage stats
 echo "===========================================================================================" >> $TmpLog
 echo "" >> $TmpLog
 cat $TmpLog >> $LogFil

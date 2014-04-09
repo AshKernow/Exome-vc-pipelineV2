@@ -69,10 +69,9 @@ source $EXOMPPLN/exome.lib.sh #library functions begin "func"
 #Set Local Variables
 funcGetTargetFile
 BamFil=`readlink -f $InpFil` #resolve absolute path to bam
-BamNam=`basename ${BamFil/.bam/}` #a name to use for the various files
-BamNam=${BamNam/.list/} 
-if [[ -z $LogFil ]];then LogFil=$BamNam.GenBQSR.log; fi # a name for the log file
-RclTable=$BamFil.recal.table # output - base quality score recalibration table
+BamNam=`basename $BamFil | sed s/.bam// | sed s/.list//` #a name to use for the various files
+if [[ -z "$LogFil" ]];then LogFil=$BamNam.GenBQSR.log; fi # a name for the log file
+RclTable=$BamNam.recal.table # output - base quality score recalibration table
 GatkLog=$BamNam.gatklog #a log for GATK to output to, this is then trimmed and added to the script log
 TmpLog=$BamNam.GenBQSR.temp.log #temporary log file 
 TmpDir=$BamNam.GenBQSR.tempdir; mkdir -p $TmpDir #temporary directory
@@ -101,19 +100,19 @@ funcRunStep
 
 #Call next step; if original file was a list of bams then need to call as an array job
 ChecList=${InpFil##*.}
-if [[ $ChecList == "list" ]];then
+if [[ "$ChecList" == "list" ]];then
    echo $ChecList
    nJobs=$(cat $BamFil | wc -l)
    NextJob="Apply Base Quality Score Recalibration"
    QsubCmd="qsub -t 1-$nJobs -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.6.ApplyRecalibration.sh -i $BamFil -x $RclTable -r $RefFil -t $TgtBed -l $LogFil -P"
-   if [[ $AllowMisencoded == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
-   if [[ $BadET == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
+   if [[ "$AllowMisencoded" == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
+   if [[ "$BadET" == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
    funcPipeLine
 else
     NextJob="Apply Base Quality Score Recalibration"
     QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.6.ApplyRecalibration.sh -i $BamFil -x $RclTable -r $RefFil -t $TgtBed -l $LogFil -P"
-    if [[ $AllowMisencoded == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
-    if [[ $BadET == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
+    if [[ "$AllowMisencoded" == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
+    if [[ "$BadET" == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
     funcPipeLine
 fi
 

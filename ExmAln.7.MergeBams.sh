@@ -66,8 +66,8 @@ source $EXOMPPLN/exome.lib.sh #library functions begin "func"
 
 #Set Local Variables
 BamLst=`readlink -f $InpFil` #resolve absolute path to bam
-BamNam=`basename ${BamLst/.bam/}` #a name to use for the various files
-if [[ -z $LogFil ]];then LogFil=$BamNam.MrgBam.log; fi # a name for the log file
+BamNam=`basename $BamFil | sed s/.bam//` #a name to use for the various files
+if [[ -z "$LogFil" ]];then LogFil=$BamNam.MrgBam.log; fi # a name for the log file
 MrgFil=$BamNam.merged.bam #file to output
 GatkLog=$BamNam.MrgBam.gatklog #a log for GATK to output to, this is then trimmed and added to the script log
 TmpLog=$BamNam.MrgBam.temp.log #temporary log file
@@ -77,7 +77,7 @@ TmpDir=$BamNam.MrgBams.tempdir; mkdir -p $TmpDir #temporary directory
 ProcessName="Merge Bams with GATK" # Description of the script - used in log
 funcWriteStartLog
 
-#Apply Recalibration
+#Merge Bams
 StepName="Merge Bams using GATK PrintReads" # Description of this step - used in log
 StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -T PrintReads
@@ -93,8 +93,8 @@ funcRunStep
 #Call next step
 NextJob="Get Depth of Coverage Statistics"
 QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.8a.DepthofCoverage.sh -i $MrgFil -r $RefFil -t $TgtBed -l $LogFil"
-if [[ $AllowMisencoded == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
-if [[ $BadET == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
+if [[ "$AllowMisencoded" == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
+if [[ "$BadET" == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
 funcPipeLine
 NextJob="Get basic bam metrics"
 QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.3a.Bam_metrics.sh -i $MrgFil -r $RefFil -l $LogFil -Q"
@@ -104,4 +104,4 @@ funcPipeLine
 funcWriteEndLog
 
 #Clean up
-#if [[ -s $MrgFil ]]; then rm $(cat $BamLst); fi
+if [[ -s $MrgFil ]]; then rm $(cat $BamLst); fi

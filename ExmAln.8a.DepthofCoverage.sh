@@ -64,8 +64,9 @@ source $EXOMPPLN/exome.lib.sh #library functions begin "func"
 #Set Local Variables
 funcFilfromList
 BamFil=`readlink -f $InpFil` #resolve absolute path to bam
-if [[ -z $LogFil ]];then LogFil=$BamFil.DoC.log; fi # a name for the log file
-OutFil=$BamFil.DoC #prefix used in names of output files
+BamNam=`basename $BamFil | sed s/.bam//` #a name to use for the various files
+if [[ -z $LogFil ]];then LogFil=$BamNam.DoC.log; fi # a name for the log file
+OutFil=$BamNam.DoC #prefix used in names of output files
 GatkLog=$BamNam.DoC.gatklog #a log for GATK to output to, this is then trimmed and added to the script log
 TmpLog=$BamNam.DoC.temp.log #temporary log file 
 TmpDir=$BamNam.DoC.tempdir; mkdir -p $TmpDir #temporary directory

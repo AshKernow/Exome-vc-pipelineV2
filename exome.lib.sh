@@ -3,7 +3,7 @@
 #-------------------------------------------------------------------------------------------------------
 #Function to set the target file location when given a code present as a variable in the reference file
 funcGetTargetFile (){
-	if [[ $TGTCODES == *$TgtBed* ]];then
+	if [[ "$TGTCODES" == "*$TgtBed*" ]];then
 		eval TgtBed=\$$TgtBed
 	fi
 }
@@ -13,7 +13,7 @@ funcGetTargetFile (){
 #Function to get input file name from a list of files in an array job
 funcFilfromList() {
 ChecList=${InpFil##*.}
-if [[ $ChecList == "list" ]];then
+if [[ "$ChecList" == "list" ]];then
 	echo $ChecList
 	InpFil=$(head -n $SGE_TASK_ID $InpFil | tail -n 1)
 fi
@@ -27,12 +27,12 @@ uname -a >> $TmpLog
 echo "Start "$ProcessName" - $0:`date`" >> $TmpLog
 echo " Job name: "$JOB_NAME >> $TmpLog
 echo " Job ID: "$JOB_ID >> $TmpLog
-if [[ ! -z $SGE_TASK_ID ]]; then echo " Array task ID: "$SGE_TASK_ID >> $TmpLog; fi
+if [[ -n "$SGE_TASK_ID" ]]; then echo " Array task ID: "$SGE_TASK_ID >> $TmpLog; fi
 echo " Input File: "$InpFil >> $TmpLog
-if [[ ! -z $BamFil ]]; then echo " Bam File: "$BamFil >> $TmpLog; fi
-if [[ ! -z $BamNam ]]; then echo " Base name for outputs: $BamNam" >> $TmpLog; fi
-if [[ ! -z $Chr ]]; then echo " Chromosome: "$Chr >> $TmpLog; fi
-if [[ ! -z $TgtBed ]]; then echo " Target Intervals File: "$TgtBed >> $TmpLog; fi
+if [[ -n "$BamFil" ]]; then echo " Bam File: "$BamFil >> $TmpLog; fi
+if [[ -n "$BamNam" ]]; then echo " Base name for outputs: $BamNam" >> $TmpLog; fi
+if [[ -n "$Chr" ]]; then echo " Chromosome: "$Chr >> $TmpLog; fi
+if [[ -n "$TgtBed" ]]; then echo " Target Intervals File: "$TgtBed >> $TmpLog; fi
 echo "----------------------------------------------------------------" >> $TmpLog
 }
 #-------------------------------------------------------------------------------------------------------
@@ -45,7 +45,7 @@ funcLogStepStart () { echo "- Start $StepName `date`...">> $TmpLog ; }
 #-------------------------------------------------------------------------------------------------------
 #func to trim GATK output log and write it to the temp log
 funcTrimGATKlog (){
-if [[ $StepCmd == *$GATKJAR* ]]; then
+if [[ "$StepCmd" == "*$GATKJAR*" ]]; then
 	echo "  --- GATK output log for $StepName ----------------" >> $TmpLog
 	grep -vE "ProgressMeter - *[dc0-9XY]|Copyright|INITIALIZATION COMPLETE|----|For support and documentation|Done preparing for traversal" $GatkLog | awk '{ print "\t\t"$0 }' >> $TmpLog
 	echo "  --- --- --- --- --- --- ---" >> $TmpLog
@@ -57,7 +57,7 @@ fi
 #-------------------------------------------------------------------------------------------------------
 #function checks that the step has completed successfully, if not it writes and error message to the log and exits the script, otherwise it logs the completion of the step
 funcLogStepFinit () { 
-if [[ $? == 1 ]]; then #check exit status and if error then...
+if [[ $? -eq 1 ]]; then #check exit status and if error then...
 	echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" >> $TmpLog
 	echo "     $StepName failed `date`" >> $TmpLog
 	qstat -j $JOB_ID | grep -E "usage *$SGE_TASK_ID:" >> $TmpLog #get cluster usage stats
@@ -90,7 +90,7 @@ funcLogStepFinit
 funcWriteEndLog () {
 echo "End "$ProcessName" $0:`date`" >> $TmpLog
 SrchTrm="usage"
-if [[ $SGE_TASK_ID -gt 0 ]]; then SrchTrm=$SrchTrm" *$SGE_TASK_ID:"; fi
+if [[ "$SGE_TASK_ID" -gt 0 ]]; then SrchTrm=$SrchTrm" *$SGE_TASK_ID:"; fi
 qstat -j $JOB_ID | grep -E "$SrchTrm" >> $TmpLog #get cluster usage stats
 echo "===========================================================================================" >> $TmpLog
 echo "" >> $TmpLog
@@ -102,9 +102,9 @@ rm -r $TmpLog $TmpDir
 #-------------------------------------------------------------------------------------------------------
 # function for common additional arguments to GATK
 funcGatkAddArguments (){
-if [[ $AllowMisencoded == "true" ]]; then StepCmd=$StepCmd" -allowPotentiallyMisencodedQuals"; fi
-if [[ $FixMisencoded == "true" ]]; then StepCmd=$StepCmd" -fixMisencodedQuals"; fi
-if [[ $BadET == "true" ]]; then StepCmd=$StepCmd" -et NO_ET -K $ETKEY"; fi
+if [[ "$AllowMisencoded" == "true" ]]; then StepCmd=$StepCmd" -allowPotentiallyMisencodedQuals"; fi
+if [[ "$FixMisencoded" == "true" ]]; then StepCmd=$StepCmd" -fixMisencodedQuals"; fi
+if [[ "$BadET" == "true" ]]; then StepCmd=$StepCmd" -et NO_ET -K $ETKEY"; fi
 }
 
 #-------------------------------------------------------------------------------------------------------
@@ -112,7 +112,7 @@ if [[ $BadET == "true" ]]; then StepCmd=$StepCmd" -et NO_ET -K $ETKEY"; fi
 #-------------------------------------------------------------------------------------------------------
 # function for calling next step in pipeline
 funcPipeLine (){
-if [[ $PipeLine == "true" ]]; then
+if [[ "$PipeLine" == "true" ]]; then
 	mkdir -p stdostde
 	echo "- Call $NextJob `date`:" >> $TmpLog
 	echo "    "$QsubCmd  >> $TmpLog

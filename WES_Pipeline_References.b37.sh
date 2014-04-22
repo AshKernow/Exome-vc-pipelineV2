@@ -25,5 +25,6 @@ export ETKEY="$EXOMRES/ads2202_c2b2.columbia.edu.key"
 #Capture Kit Target Files
 export AgtV2="$EXOMRES/SureSelect_All_Exon_V2.hg19.ordered.bed"
 export AgtV4="$EXOMRES/SureSelect_All_Exon_V4_hg19.ordered.bed"
+export AgtV5="SureSelect_Human_All_Exon_V5_UTRs_Covered.ordered.bed"
 export NbgV2="$EXOMRES/SeqCap_EZ_Exome_v2.hg19.targets.bed"
-export TGTCODES="AgtV2:AgtV4:NbgV2"
+export TGTCODES="AgtV2:AgtV4:AgtV5:NbgV2"

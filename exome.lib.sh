@@ -3,7 +3,9 @@
 #-------------------------------------------------------------------------------------------------------
 #Function to set the target file location when given a code present as a variable in the reference file
 funcGetTargetFile (){
-	if [[ "$TGTCODES" == "*$TgtBed*" ]];then
+	echo $TGTCODED
+	echo $TgtBed
+	if [[ "$TGTCODES" == *"$TgtBed"* ]];then
 		eval TgtBed=\$$TgtBed
 	fi
 }
@@ -15,7 +17,7 @@ funcFilfromList() {
 ChecList=${InpFil##*.}
 if [[ "$ChecList" == "list" ]];then
 	echo $ChecList
-	InpFil=$(head -n $SGE_TASK_ID $InpFil | tail -n 1)
+	InpFil=$(head -n $ArrNum $InpFil | tail -n 1)
 fi
 }
 #-------------------------------------------------------------------------------------------------------
@@ -45,12 +47,10 @@ funcLogStepStart () { echo "- Start $StepName `date`...">> $TmpLog ; }
 #-------------------------------------------------------------------------------------------------------
 #func to trim GATK output log and write it to the temp log
 funcTrimGATKlog (){
-if [[ "$StepCmd" == "*$GATKJAR*" ]]; then
 	echo "  --- GATK output log for $StepName ----------------" >> $TmpLog
 	grep -vE "ProgressMeter - *[dc0-9XY]|Copyright|INITIALIZATION COMPLETE|----|For support and documentation|Done preparing for traversal" $GatkLog | awk '{ print "\t\t"$0 }' >> $TmpLog
 	echo "  --- --- --- --- --- --- ---" >> $TmpLog
 	rm $GatkLog
-fi
 }
 #-------------------------------------------------------------------------------------------------------
 
@@ -69,7 +69,7 @@ if [[ $? -eq 1 ]]; then #check exit status and if error then...
 	rm $TmpLog
 	exit 1
 fi
-funcTrimGATKlog
+if [[ "$StepCmd" == *"$GATKJAR"* ]]; then funcTrimGATKlog; fi
 echo "- End $StepName `date`...">> $TmpLog # if no error log the completion of the step
 echo "-----------------------------------------------------------------------" >> $TmpLog
 }

@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -cwd -l mem=12G,time=2:: -N AppRcl
+#$ -cwd -l mem=12G,time=4:: -N AppRcl
 
 
 #This script takes a bam file and uses a previously generated base quality score recalibration (BQSR) table to recalibrate them using GATK. If the bam file has previously been split into chromosomes (default 24, i.e. 1-22, X, Y) a list can be provided. The filename of list MUST end ".list"
@@ -68,6 +68,7 @@ source $RefFil
 source $EXOMPPLN/exome.lib.sh #library functions begin "func"
 
 #Set Local Variables
+ArrNum=$SGE_TASK_ID
 funcGetTargetFile
 InpNam=`basename $InpFil | sed s/.bam// | sed s/.list//`
 RclLst=Recalibrated.$InpNam.list #File listing paths to recalibrated bams
@@ -140,4 +141,5 @@ fi
 funcWriteEndLog
 
 #Clean up
-if [[ -e $RclFil ]]; then rm $BamFil ${BamFil/bam/bai} $TmpTar; fi
+if [[ -e $RclFil ]]; then rm $BamFil ${BamFil/bam/bai}; fi
+if [[ "$TmpTar" != "$TgtBed" ]]; then rm $TmpTar; fi

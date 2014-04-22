@@ -56,6 +56,7 @@ source $EXOMPPLN/exome.lib.sh #library functions begin "func"
 if [[ -z $GCmet ]] && [[ -z $ISmet ]] && [[ -z $QDmet ]]; then #if no flags run all metrics
 	ALLmet="true"
 fi
+ArrNum=$SGE_TASK_ID
 funcFilfromList
 BamFil=`readlink -f $InpFil` #resolve absolute path to bam
 BamNam=`basename ${BamFil/.bam/}` #a name to use for the various output files

@@ -57,6 +57,7 @@ source $EXOMPPLN/exome.lib.sh
 if [[ ! -e $InpFil ]] || [[ ! -e $RefFil ]]; then echo "Missing required arguments"; echo "$usage"; exit; fi
 
 #Set local variablesfuncFilfromList
+ArrNum=$SGE_TASK_ID
 funcFilfromList #if the input is a list get the appropriate input file for this job of the array --> $InpFil
 BamFil=`readlink -f $InpFil` #resolve absolute path to bam
 BamNam=`basename $BamFil` 

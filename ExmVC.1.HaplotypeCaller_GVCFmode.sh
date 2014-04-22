@@ -71,6 +71,7 @@ InpNam=`basename ${InpFil/.bam/}`
 InpNam=`basename ${InpNam/.list/}`
 VcfLst=HCgVCF.$InpNam.list #File listing paths to recalibrated bams
 VcfDir=$InpNam"_gVCF"; mkdir -p $VcfDir #Output Directory
+ArrNum=$SGE_TASK_ID
 funcFilfromList #if the input is a list get the appropriate input file for this job of the array --> $InpFil
 BamFil=`readlink -f $InpFil` #resolve absolute path to bam
 BamNam=`basename $BamFil` 

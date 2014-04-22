@@ -62,6 +62,7 @@ source $RefFil
 source $EXOMPPLN/exome.lib.sh #library functions begin "func"
 
 #Set Local Variables
+ArrNum=$SGE_TASK_ID
 funcFilfromList
 BamFil=`readlink -f $InpFil` #resolve absolute path to bam
 BamNam=`basename $BamFil | sed s/.bam//` #a name to use for the various files

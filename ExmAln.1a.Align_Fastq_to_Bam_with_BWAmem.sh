@@ -1,8 +1,15 @@
 #!/bin/bash
 #$ -cwd -pe smp 6 -l mem=2G,time=12:: -N BamBWABam
 
-#This script takes a bam file and reverts it to sam format and then realigns with BWA mem
-#	InpFil - (required) - Path to Bam file to be aligned. Alternatively a file with a list of bams can be provided and the script run in an array job. List file name must end ".list"
+#This script takes fastq files and aligns them with BWA mem
+#	InpFil - (required) - the primary input is a tab-delimited table containing the path to the fastq file and the RG read header for the output SAM file.
+#						- Columns should be as follows:
+#						  For single end - <fastq files> <readgroup headers>
+#						  For paired end - <Read 1 fastq files> <readgroup headers> <Read 2 fastq files> e.g.:
+#
+#	Samp1_GATCAG_R1.fastq.gz	@RG\tID:Samp1_GATCAG\tSM:Samp1\tLB:Lib245\tPL:ILLUMINA\tCN:BISRColumbia	Samp1_GATCAG_R2.fastq.gz
+#
+#						- If the table contains multiple lines the script run in an array job, each job will read the line from the table corresponding to its $SGE_TASK_ID
 #	RefFiles - (required) - shell file to export variables with locations of reference files and resource directories; see list below
 #	LogFil - (optional) - File for logging progress
 #	TgtBed - (optional) - Exome capture kit targets bed file (must end .bed for GATK compatability) - only required if calling pipeline
@@ -21,18 +28,14 @@
 # HTSlib <https://github.com/samtools/htslib> <https://github.com/samtools/htslib/archive/master.zip>
 
 ## This file also require exome.lib.sh - which contains various functions used throughout my Exome analysis scripts; this file should be in the same directory as this script
-
-## Note that htscmd bam2fq will generate a warning:
-##    [W::bam_hdr_read] EOF marker is absent. The input is probably truncated.
-## This is not a problem, it is just a bug related to piping the stdin as the input, it can be ignored
 ###############################################################
 
 #set default arguments
 usage="
-ExmAln.1b.ReAlign_Bam_with_BWAmem.sh -i <InputFile> -r <reference_file> -t <target intervals file> -l <logfile> -PH
+ExmAln.1a.Align_Fastq_to_Bam_with_BWAmem.sh -i <InputFile> -r <reference_file> -t <target intervals file> -l <logfile> -PH
 
-	 -i (required) - Path to Bam file or \".list\" file containing a multiple paths
-	 -r (required) - shell file to export variables with locations of reference files and resource directories
+	 -i (required) - Table containing the path to the fastq file and the RG read header
+	 -r (required) - Shell file to export variables with locations of reference files and resource directories
 	 -l (optional) - Log file
 	 -t (optional) - Exome capture kit targets or other genomic intervals bed file (must end .bed for GATK compatability); this file is required if calling the pipeline but otherwise can be omitted
 	 -P (flag) - Initiate exome analysis pipeline after completion of script
@@ -63,22 +66,27 @@ if [[ ! -e "$InpFil" ]] || [[ ! -e "$RefFil" ]]; then echo "Missing required arg
 
 #set local variables
 ArrNum=$SGE_TASK_ID
-funcFilfromList #if the input is a list get the appropriate input file for this job of the array --> $InpFil
-BamFil=`readlink -f $InpFil` #resolve absolute path to bam
-BamNam=`basename $BamFil` 
-BamNam=`basename $BamFil | sed s/.bam// | sed s/.list//` # a name for the output files
+if [[ "$ArrNum" == "undefined"  ]]; then ArrNum=1; fi
+fastq1=`readlink -f $InpFil`
+NCOL=$(head -n1 $InpFil | wc -w | cut -d" " -f1)
+fastq1=`readlink -f $(tail -n+$ArrNum $InpFil | head -n 1 | cut -f1)`
+if [ $NCOL -eq 3 ]; then
+	fastq2=`readlink -f $(tail -n+$ArrNum $InpFil | head -n 1 | cut -f3)`
+else
+	fastq=""
+fi
+rgheader=$(tail -n+$ArrNum $InpFil | head -n 1 | cut -f2)
+BamNam=$(echo $rgheader | sed s/[[:print:]]*ID:// | sed s/[\\]tSM[[:print:]]*//) # a name for the output files
 if [[ -z "$LogFil" ]]; then LogFil=$BamNam.BbB.log; fi # a name for the log file
-AlnDir=wd.$BamNam.align # directory in which processing will be done
+AlnDir=wd.$BamNam.align; mkdir -p $AlnDir; cd $AlnDir # create working and move into working directory
 AlnFil=$BamNam.bwamem.bam #filename for bwa-mem aligned file
-SngFil=$BamNam.singletons #output file for the singletons to be dumped to
 SrtFil=$BamNam.bwamem.sorted.bam #output file for sorted bam
 DdpFil=$BamNam.bwamem.mkdup.bam #output file with PCR duplicates marked
 FlgStat=$BamNam.bwamem.flagstat #output file for bam flag stats
 IdxStat=$BamNam.idxstats #output file for bam index stats
-mkdir -p $AlnDir # create working directory
-cd $AlnDir # move into working directory
 TmpLog=$BamNam.BwB.temp.log #temporary log file
 TmpDir=$BamNam.BwB.tempdir; mkdir -p $TmpDir #temporary directory
+
 
 
 #start log
@@ -87,23 +95,12 @@ funcWriteStartLog
 echo " Build of reference files: "$BUILD >> $TmpLog
 echo "----------------------------------------------------------------" >> $TmpLog
 
-#get ReadGroupHeader from input BAM
-RgHeader=$(samtools view -H $BamFil | grep ^@RG | awk '{ gsub("\t","\\t") } { print }')
-echo "ReadGroup header: $RgHeader" >> $TmpLog
-if [[ $RgHeader == "" ]]||[[ $(echo "$RgHeader" | wc -l) -gt 1 ]]; then #check that we have a  RG header and if not write a warning to the log file
-	echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" >> $TmpLog
-	echo "     Problem with ReadGroup header" >> $TmpLog
-	echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" >> $TmpLog
-fi
-
 ###Align using BWA mem algorithm
-# use HTSlib to shuffle the bam | then tranform it to an interleaved fastq discarding an singletons to a separate file as they mess up the interleaving | transform sam back to bam
+# align with BWA-mem | transform sam back to bam
 StepName="Align with BWA mem"
-StepCmd="htscmd bamshuf -uOn 128 $BamFil tmp |
- htscmd bam2fq -s $SngFil -aO - |
- gzip | bwa mem -M -R \"$RgHeader\" -t 6 -p $REF - |
+StepCmd="bwa mem -M -t 6 -R \"$rgheader\" $REF $fastq1 $fastq2 |
  htscmd samview -bS - > $AlnFil"
-funcRunStep
+#funcRunStep
 
 #Sort the bam file by coordinate
 StepName="Sort Bam using PICARD"

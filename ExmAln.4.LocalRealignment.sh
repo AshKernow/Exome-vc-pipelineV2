@@ -6,7 +6,7 @@
 #	InpFil - (required) - Path to Bam file to be realigned
 #	RefFiles - (required) - shell file to export variables with locations of reference files, jar files, and resource directories; see list below
 #	LogFil - (optional) - File for logging progress
-#	TgtBed - (optional) - Exome capture kit targets bed file (must end .bed for GATK compatability) - only required if calling pipeline
+#	TgtBed - (optional) - Exome capture kit targets bed file (must end .bed for GATK compatability) 
 #	Flag - A - AllowMisencoded - see GATK manual (https://www.broadinstitute.org/gatk/gatkdocs/org_broadinstitute_sting_gatk_CommandLineGATK.html#--allow_potentially_misencoded_quality_scores), causes GATK to ignore abnormally high quality scores that would otherwise indicate that the quality score encoding was incorrect
 #	Flag - P - PipeLine - call the next step in the pipeline at the end of the job
 #	Flag - B - BadET - prevent GATK from phoning home
@@ -67,14 +67,15 @@ source $RefFil
 source $EXOMPPLN/exome.lib.sh #library functions begin "func"
 
 #Set Local Variables
+ArrNum=$SGE_TASK_ID
 funcGetTargetFile
 BamFil=`readlink -f $InpFil` #resolve absolute path to bam
 BamNam=`basename $BamFil | sed s/.bam//` #a name to use for the various files
 if [[ -z "$LogFil" ]];then LogFil=$BamNam.LocReal.log; fi # a name for the log file
 RalDir=LocRealign.$BamNam; mkdir -p $RalDir #directory to collect individual chromosome realignments
 RalLst=LocRealign.$BamNam.list #File listing paths to individual chromosome realignments
-Chr=$(echo $SGE_TASK_ID | sed s/24/Y/ | sed s/23/X/)
-if [[ "$SGE_TASK_ID" != "undefined" ]]; then ChrNam=".CHR_$Chr"; fi
+Chr=$(echo $ArrNum | sed s/24/Y/ | sed s/23/X/)
+if [[ "$ArrNum" != "undefined" ]]; then ChrNam=".CHR_$Chr"; fi
 if [[ "$BUILD" = "hg19" ]]; then Chr=chr$Chr; fi
 RalFil=$RalDir/$BamNam.realigned$ChrNam.bam # the output - a realigned bam file for the CHR
 TgtFil=$RalDir/$BamNam.target_intervals$ChrNam.list #target intervals file created by GATK RealignerTargetCreator
@@ -97,7 +98,11 @@ StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -o $TgtFil
  -log $GatkLog" #command to be run
  
-if [[ "$SGE_TASK_ID" != "undefined" ]]; then StepCmd=$StepCmd" -L $Chr"; fi
+if [[ "$ArrNum" == "undefined" ]]; then 
+StepCmd=$StepCmd" -L $TgtBed"
+else
+StepCmd=$StepCmd" -L $Chr"
+fi
 funcGatkAddArguments
 funcRunStep
 
@@ -112,19 +117,23 @@ StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -known $INDEL1KG
  -o $RalFil
  -log $GatkLog" #command to be run
-if [[ "$SGE_TASK_ID" != "undefined" ]]; then StepCmd=$StepCmd" -L $Chr"; fi
+if [[ "$ArrNum" == "undefined" ]]; then 
+StepCmd=$StepCmd" -L $TgtBed"
+else
+StepCmd=$StepCmd" -L $Chr"
+fi
 funcGatkAddArguments
 funcRunStep
 
 #Call next step - if array by chromosome only the first job of the array calls the next job and it is called with a hold until all of the array jobs are finished
-if [[ "$SGE_TASK_ID" -eq 1 ]]; then
+if [[ "$ArrNum" -eq 1 ]]; then
 	find `pwd` | grep -E bam$ | grep $RalDir | sort -V > $RalLst #generate realigned file list
 	NextJob="Generate Base Quality Score Recalibration table"
 	QsubCmd="qsub -hold_jid $JOB_ID -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.5.GenerateBQSRTable.sh -i $RalLst -r $RefFil -t $TgtBed -l $LogFil -P"
 	if [[ "$AllowMisencoded" == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
 	if [[ "$BadET" == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
 	funcPipeLine
-elif [[ "$SGE_TASK_ID" == "undefined"  ]]; then
+elif [[ "$ArrNum" == "undefined"  ]]; then
 	NextJob="Generate Base Quality Score Recalibration table"
 	QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.5.GenerateBQSRTable.sh -i $RalFil -r $RefFil -t $TgtBed -l $LogFil -P"
 	if [[ "$AllowMisencoded" == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi

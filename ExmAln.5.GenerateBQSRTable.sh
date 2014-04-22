@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -cwd -l mem=10G,time=2:: -N GenBQSR
+#$ -cwd -l mem=10G,time=3:: -N GenBQSR
 
 #This script takes a bam file or a list of bam files (filename must end ".list") and generates the base quality score recalibration table using GATK
 #	InpFil - (required) - Path to Bam file or a list of BamFiles to be recalibrated
@@ -67,6 +67,7 @@ source $RefFil
 source $EXOMPPLN/exome.lib.sh #library functions begin "func"
 
 #Set Local Variables
+ArrNum=$SGE_TASK_ID
 funcGetTargetFile
 BamFil=`readlink -f $InpFil` #resolve absolute path to bam
 BamNam=`basename $BamFil | sed s/.bam// | sed s/.list//` #a name to use for the various files

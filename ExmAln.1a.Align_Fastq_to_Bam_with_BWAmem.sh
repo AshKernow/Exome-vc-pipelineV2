@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -cwd -pe smp 6 -l mem=2G,time=12:: -N BamBWABam
+#$ -cwd -pe smp 6 -l mem=2G,time=12:: -N FQBWABam
 
 #This script takes fastq files and aligns them with BWA mem
 #	InpFil - (required) - the primary input is a tab-delimited table containing the path to the fastq file and the RG read header for the output SAM file.
@@ -77,17 +77,15 @@ else
 fi
 rgheader=$(tail -n+$ArrNum $InpFil | head -n 1 | cut -f2)
 BamNam=$(echo $rgheader | sed s/[[:print:]]*ID:// | sed s/[\\]tSM[[:print:]]*//) # a name for the output files
-if [[ -z "$LogFil" ]]; then LogFil=$BamNam.BbB.log; fi # a name for the log file
+if [[ -z "$LogFil" ]]; then LogFil=$BamNam.FqB.log; fi # a name for the log file
 AlnDir=wd.$BamNam.align; mkdir -p $AlnDir; cd $AlnDir # create working and move into working directory
 AlnFil=$BamNam.bwamem.bam #filename for bwa-mem aligned file
 SrtFil=$BamNam.bwamem.sorted.bam #output file for sorted bam
 DdpFil=$BamNam.bwamem.mkdup.bam #output file with PCR duplicates marked
 FlgStat=$BamNam.bwamem.flagstat #output file for bam flag stats
 IdxStat=$BamNam.idxstats #output file for bam index stats
-TmpLog=$BamNam.BwB.temp.log #temporary log file
-TmpDir=$BamNam.BwB.tempdir; mkdir -p $TmpDir #temporary directory
-
-
+TmpLog=$BamNam.FqB.temp.log #temporary log file
+TmpDir=$BamNam.FqB.tempdir; mkdir -p $TmpDir #temporary directory
 
 #start log
 ProcessName="Align with BWA"
@@ -100,7 +98,7 @@ echo "----------------------------------------------------------------" >> $TmpL
 StepName="Align with BWA mem"
 StepCmd="bwa mem -M -t 6 -R \"$rgheader\" $REF $fastq1 $fastq2 |
  htscmd samview -bS - > $AlnFil"
-#funcRunStep
+funcRunStep
 
 #Sort the bam file by coordinate
 StepName="Sort Bam using PICARD"

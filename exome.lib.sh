@@ -3,8 +3,6 @@
 #-------------------------------------------------------------------------------------------------------
 #Function to set the target file location when given a code present as a variable in the reference file
 funcGetTargetFile (){
-	echo $TGTCODED
-	echo $TgtBed
 	if [[ "$TGTCODES" == *"$TgtBed"* ]];then
 		eval TgtBed=\$$TgtBed
 	fi
@@ -33,6 +31,8 @@ if [[ -n "$SGE_TASK_ID" ]]; then echo " Array task ID: "$SGE_TASK_ID >> $TmpLog;
 echo " Input File: "$InpFil >> $TmpLog
 if [[ -n "$BamFil" ]]; then echo " Bam File: "$BamFil >> $TmpLog; fi
 if [[ -n "$BamNam" ]]; then echo " Base name for outputs: $BamNam" >> $TmpLog; fi
+if [[ -n "$VcfFil" ]]; then echo " Vcf File: "$VcfFil >> $TmpLog; fi
+if [[ -n "$VcfNam" ]]; then echo " Base name for outputs: $VcfNam" >> $TmpLog; fi
 if [[ -n "$Chr" ]]; then echo " Chromosome: "$Chr >> $TmpLog; fi
 if [[ -n "$TgtBed" ]]; then echo " Target Intervals File: "$TgtBed >> $TmpLog; fi
 echo "----------------------------------------------------------------" >> $TmpLog

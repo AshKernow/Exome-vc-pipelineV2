@@ -43,6 +43,7 @@ while getopts i:r:l:PH opt; do
 done
 
 #load settings file
+RefFil=`readlink -f $RefFil`
 source $RefFil
 
 #Load script library
@@ -58,6 +59,7 @@ TmpLog=$AnnNam.AnnVC.temp.log #temporary log file
 AnnDir=$AnnNam.AnnVC.tempdir; mkdir -p $AnnDir
 TmpVar=$AnnDir/$AnnNam.tempvar
 AnnFil=$AnnNam.annovar
+VcfFil=${InpFil/vcf/annotated.vcf}
 
 #Start Log File
 ProcessName="Annotate VCF with ANNOVAR" # Description of the script - used in log
@@ -86,10 +88,10 @@ tabix  -s 1 -b 2 -e 3 $AnnFil.gz
 #Annotate with vcftools
 StepNam="Annotate with vcftools"
 StepCmd="cat $InpFil | vcf-annotate -a $AnnFil.gz
- -c -,-,-,-,-,INFO/SeqFunc,INFO/GeneName,INFO/MutClass,INFO/AAChange,INFO/ESPfreq,-,-,INFO/1KGfreq,-,-,-,-,INFO/SIFTscr,-,INFO/SIFTprd,-,-,INFO/PP2scr,INFO/PP2prd,-,-,-,INFO/MutTscr,-,INFO/MutTprd,-,-,-,-,-,-,-,-,-,-,-,INFO/GERP,INFO/PhyloP,INFO/SiPhy,INFO/CADD,CHROM,POS,-,REF,ALT
- -d key=INFO,ID=SeqFunc,Number=1,Type=String,Description='Genomic region/Sequence Function'
+ -c -,-,-,-,-,INFO/VarFunc,INFO/GeneName,INFO/VarClass,INFO/AAChange,INFO/ESPfreq,-,-,INFO/1KGfreq,-,-,-,-,INFO/SIFTscr,-,INFO/SIFTprd,-,-,INFO/PP2scr,INFO/PP2prd,-,-,-,INFO/MutTscr,-,INFO/MutTprd,-,-,-,-,-,-,-,-,-,-,-,INFO/GERP,INFO/PhyloP,INFO/SiPhy,INFO/CADD,CHROM,POS,-,REF,ALT
+ -d key=INFO,ID=VarFunc,Number=1,Type=String,Description='Genomic region/Sequence Function'
  -d key=INFO,ID=GeneName,Number=1,Type=String,Description='refGene GeneName'
- -d key=INFO,ID=MutClass,Number=1,Type=String,Description='Mutational Class'
+ -d key=INFO,ID=VarClass,Number=1,Type=String,Description='Mutational Class'
  -d key=INFO,ID=AAChange,Number=1,Type=String,Description='Amino Acid change'
  -d key=INFO,ID=ESPfreq,Number=1,Type=Float,Description='Exome Sequencing Project 6500 alternative allele frequency'
  -d key=INFO,ID=1KGfreq,Number=1,Type=Float,Description='1000 genome alternative allele frequency'
@@ -103,9 +105,13 @@ StepCmd="cat $InpFil | vcf-annotate -a $AnnFil.gz
  -d key=INFO,ID=PhyloP,Number=1,Type=Float,Description='PhyloP score'
  -d key=INFO,ID=SiPhy,Number=1,Type=Float,Description='SiPhy scores'
  -d key=INFO,ID=CADD,Number=1,Type=Float,Description='Whole-genome CADD score'
- > $InpFil.annotated.vcf"
+ > $VcfFil"
 funcRunStep
 
+#Get VCF stats with python script
+StepNam="Get VCF stats"
+StepCmd="python $EXOMPPLN/VCF_summary_Stats.py -v $VcfFil -o ${InpFil/vcf/stats.tsv}"
+funcRunStep
 
 #End Log
 funcWriteEndLog

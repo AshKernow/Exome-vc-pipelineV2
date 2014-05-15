@@ -66,10 +66,10 @@ for WhichCode in CodingTypes:
 					INFOdict[FieldName]=FieldValue
 			
 			# Get values for later
-			KGscore=float(INFOdict.get('1000g2012apr_all',2))
-			ESPscore=float(INFOdict.get('esp6500si_all',2))
-			MutationFunct=str(INFOdict.get('Func.refGene','none'))
-			MutationClass=str(INFOdict.get('ExonicFunc.refGene','none'))
+			KGscore=float(INFOdict.get('1KGfreq',2))
+			ESPscore=float(INFOdict.get('ESPfreq',2))
+			MutationFunct=str(INFOdict.get('VarFunc','none'))
+			MutationClass=str(INFOdict.get('VarClass','none'))
 			#KGscore=float(INFOdict.get('1KG.score',0))
 			#MutationFunct=str(INFOdict.get('function','none'))
 			#MutationClass=str(INFOdict.get('functionClass','none'))

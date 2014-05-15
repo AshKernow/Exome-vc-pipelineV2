@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -cwd -l mem=12G,time=12:: -N VQSR
+#$ -cwd -l mem=24G,time=12:: -N VQSRFilt
 
 #This script takes a raw VCF file and performs GATK's variant quality score recalibration
 #	InpFil - (required) - Path to VCF file or a list of VCF Files to be recalibrated
@@ -56,6 +56,7 @@ while getopts i:r:l:PABH opt; do
 done
 
 #load settings file
+RefFil=`readlink -f $RefFil`
 source $RefFil
 
 #Load script library
@@ -83,7 +84,7 @@ funcWriteStartLog
 
 ##Build the SNP recalibration model
 StepName="Build the SNP recalibration model with GATK VariantRecalibrator" # Description of this step - used in log
-StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
+StepCmd="java -Xmx9G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -T VariantRecalibrator 
  -R $REF
  -input $VcfFil
@@ -99,14 +100,14 @@ StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -tranche 90.0
  -recalFile $VcfNam.recalibrate_SNP.recal
  -tranchesFile $VcfNam.recalibrate_SNP.tranches
- -rscriptFile recalibrate_SNP_plots.R
+ -rscriptFile $VcfNam.recalibrate_SNP_plots.R
  -log $GatkLog" #command to be run
 funcGatkAddArguments
 funcRunStep
 
 ##Apply SNP recalibration
 StepName="Apply SNP recalibration with GATK ApplyRecalibration" # Description of this step - used in log
-StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
+StepCmd="java -Xmx9G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -T ApplyRecalibration
  -R $REF
  -input $VcfFil
@@ -123,7 +124,7 @@ VcfFil=$VcfNam.recal_snps.vcf
 ##Build the InDel recalibration model
 StepName="Build the InDel recalibration model with GATK VariantRecalibrator" # Description of this step - used in log
 InfoFields="-an DP -an FS -an MQRankSum -an ReadPosRankSum"
-StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
+StepCmd="java -Xmx9G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -T VariantRecalibrator
  -R $REF
  -input $VcfFil
@@ -145,7 +146,7 @@ funcRunStep
 
 ##Apply InDel recalibration
 StepName="Apply InDel recalibration with GATK ApplyRecalibration" # Description of this step - used in log
-StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
+StepCmd="java -Xmx9G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -T ApplyRecalibration
  -R $REF
  -input $VcfFil
@@ -162,7 +163,7 @@ VcfFil=$VcfNam.recalibrated.vcf
 
 #Apply Hard Filters to VCF
 StepName="Apply Hard Filters with GATK Variant Filtration" # Description of this step - used in log
-StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
+StepCmd="java -Xmx9G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -T VariantFiltration
  -R $REF
  --variant $VcfFil
@@ -183,13 +184,14 @@ VcfFil=$VcfNam.hardfiltered.vcf
 StepName="Create filtered vcf using vcftools" # Description of this step - used in log
 StepCmd="vcftools --vcf $VcfFil --remove-filtered-all --recode --recode-INFO-all --out $VcfNam.filtered"
 funcRunStep
+mv $VcfNam.filtered.recode.vcf $VcfNam.filtered.vcf
+VcfFil=$VcfNam.filtered.vcf
+
 
 #Call next job
-NextJob="Annotate with "
-QsubCmd="qsub -hold_jid $JOB_ID -o stdostde/ -e stdostde/ $EXOMSCR/ExmVC.2ug.MergeVCF.sh -d $VcfDir -s $RefFil -t $TgtBed -l $LogFil -P"
-if [[ "$AllowMisencoded" == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
-if [[ "$BadET" == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
-#funcPipeLine
+NextJob="Annotate with Annovar"
+QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmVC.5.AnnotatewithANNOVAR.sh -i $VcfFil -r $RefFil -l $LogFil -P"
+funcPipeLine
 
 #End Log
 funcWriteEndLog

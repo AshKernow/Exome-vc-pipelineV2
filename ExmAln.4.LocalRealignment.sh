@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -cwd -l mem=10G,time=2:: -N LocRln
+#$ -cwd -l mem=10G,time=4:: -N LocRln
 
 #This script takes a bam file and perfomrs local indel realignment using GATK
 #The script by default runs across the entire bam in a single pass, for increased speed it can split the job across chromosome. If you wish to run it as an array across 24 Chromosomes simply call the script with "-t 1-24"
@@ -10,6 +10,7 @@
 #	Flag - A - AllowMisencoded - see GATK manual (https://www.broadinstitute.org/gatk/gatkdocs/org_broadinstitute_sting_gatk_CommandLineGATK.html#--allow_potentially_misencoded_quality_scores), causes GATK to ignore abnormally high quality scores that would otherwise indicate that the quality score encoding was incorrect
 #	Flag - P - PipeLine - call the next step in the pipeline at the end of the job
 #	Flag - B - BadET - prevent GATK from phoning home
+#	Flag - F - Fix mis-encoded base quality scores - see GATK manual. GATK will subtract 31 from all quality scores; used to fix encoding in some datasets (especially older Illumina ones) which starts at Q64 (see https://en.wikipedia.org/wiki/FASTQ_format#Encoding)
 #	Help - H - (flag) - get usage information
 
 #list of required vairables in reference file:
@@ -39,15 +40,17 @@ ExmAln.4.LocalRealignment.sh -i <InputFile> -r <reference_file> -t <targetfile> 
 	 -P (flag) - Call next step of exome analysis pipeline after completion of script
 	 -A (flag) - AllowMisencoded - see GATK manual
 	 -B (flag) - Prevent GATK from phoning home
+	 -F (flag) - Fix mis-encoded base quality scores - see GATK manual
 	 -H (flag) - echo this message and exit
 "
 
 AllowMisencoded="false"
 PipeLine="false"
 BadET="false"
+FixMisencoded="false"
 
 #get arguments
-while getopts i:r:l:t:PABH opt; do
+while getopts i:r:l:t:PABFH opt; do
 	case "$opt" in
 		i) InpFil="$OPTARG";;
 		r) RefFil="$OPTARG";; 
@@ -56,11 +59,13 @@ while getopts i:r:l:t:PABH opt; do
 		P) PipeLine="true";;
 		A) AllowMisencoded="true";;
 		B) BadET="true";;
+		F) FixMisencoded="true";;
 		H) echo "$usage"; exit;;
 	esac
 done
 
 #load settings file
+RefFil=`readlink -f $RefFil`
 source $RefFil
 
 #Load script library
@@ -72,10 +77,14 @@ funcGetTargetFile
 BamFil=`readlink -f $InpFil` #resolve absolute path to bam
 BamNam=`basename $BamFil | sed s/.bam//` #a name to use for the various files
 if [[ -z "$LogFil" ]];then LogFil=$BamNam.LocReal.log; fi # a name for the log file
-RalDir=LocRealign.$BamNam; mkdir -p $RalDir #directory to collect individual chromosome realignments
-RalLst=LocRealign.$BamNam.list #File listing paths to individual chromosome realignments
 Chr=$(echo $ArrNum | sed s/24/Y/ | sed s/23/X/)
-if [[ "$ArrNum" != "undefined" ]]; then ChrNam=".CHR_$Chr"; fi
+if [[ "$ArrNum" != "undefined" ]]; then 
+	ChrNam=".CHR_$Chr"
+	RalDir=LocRealign.$BamNam; mkdir -p $RalDir #directory to collect individual chromosome realignments
+	RalLst=LocRealign.$BamNam.list #File listing paths to individual chromosome realignmentsfi
+else
+	RalDir=.
+fi
 if [[ "$BUILD" = "hg19" ]]; then Chr=chr$Chr; fi
 RalFil=$RalDir/$BamNam.realigned$ChrNam.bam # the output - a realigned bam file for the CHR
 TgtFil=$RalDir/$BamNam.target_intervals$ChrNam.list #target intervals file created by GATK RealignerTargetCreator
@@ -96,6 +105,7 @@ StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -known $INDEL
  -known $INDEL1KG
  -o $TgtFil
+ --filter_mismatching_base_and_quals
  -log $GatkLog" #command to be run
  
 if [[ "$ArrNum" == "undefined" ]]; then 
@@ -116,6 +126,7 @@ StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -known $INDEL
  -known $INDEL1KG
  -o $RalFil
+ --filter_mismatching_base_and_quals
  -log $GatkLog" #command to be run
 if [[ "$ArrNum" == "undefined" ]]; then 
 StepCmd=$StepCmd" -L $TgtBed"
@@ -146,3 +157,4 @@ funcWriteEndLog
 
 #Clean up
 rm $TgtFil
+#if [[ -e $RalFil ]]; then rm $BamFil ${BamFil/bam/bai}; fi

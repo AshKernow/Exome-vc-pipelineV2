@@ -57,7 +57,7 @@ funcTrimGATKlog (){
 #-------------------------------------------------------------------------------------------------------
 #function checks that the step has completed successfully, if not it writes and error message to the log and exits the script, otherwise it logs the completion of the step
 funcLogStepFinit () { 
-if [[ $? -eq 1 ]]; then #check exit status and if error then...
+if [[ $? -ne 0 ]]; then #check exit status and if error then...
 	echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" >> $TmpLog
 	echo "     $StepName failed `date`" >> $TmpLog
 	qstat -j $JOB_ID | grep -E "usage *$SGE_TASK_ID:" >> $TmpLog #get cluster usage stats

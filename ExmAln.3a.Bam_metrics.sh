@@ -5,7 +5,7 @@
 #	InpFil - i - (required) - Path to Bam file to be aligned or a file containing a list of bam files one per line (file names must end ".list")
 #	RefFiles - r - (required) - shell file to export variables with locations of reference files, jar files, and resource directories; see list below
 #	LogFil - l - (optional) - File for logging progress
-#	Metrics - G, I, Q - (flag) - will run GC bias, Insert Size and Quality Distribution; default is to run all metrics, specidfying one or more will only run those specified
+#	Metrics - G, I, Q - (flag) - will run GC bias, Insert Size or Quality Distribution; default is to run all metrics, specidfying one or more will only run those specified
 #	Help - H - (flag) - get usage information
 
 #list of required vairables in reference file:
@@ -29,7 +29,7 @@ ExmAln.3a.Bam_metrics.sh -i <InputFile> -r <reference_file> -l <logfile> -GIQH
 	 -l (optional) - Log file
 	 -G (flag) - get GC bias metrics
 	 -I (flag) - get Inset Size metrics
-	 -Q (flag) - get quality distribution metrics
+	 -Q (flag) - get quality distribution metrics  **All three metirics are run be default
 	 -H (flag) - echo this message and exit
 "
 
@@ -47,6 +47,7 @@ while getopts i:r:l:GIQH opt; do
 done
 
 #load RefFil file
+RefFil=`readlink -f $RefFil`
 source $RefFil
 
 #Load script library

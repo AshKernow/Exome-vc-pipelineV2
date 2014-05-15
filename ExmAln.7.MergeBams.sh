@@ -2,7 +2,7 @@
 #$ -cwd -l mem=12G,time=2:: -N MrgBam
 
 
-#This script a list of bam files and merges them into a single file. The filename of list MUST end ".list"
+#This script takes a list of bam files and merges them into a single file. The filename of list MUST end ".list". The script is primarily intended to be part of the Exome analysis pipeline where the local realignment phase has been split into multiple jobs, e.g. by chromosome
 #	InpFil - (required) - A list of BamLstes to be merged
 #	RefFiles - (required) - shell file to export variables with locations of reference files, jar files, and resource directories; see list below
 #	TgtBed - (required) - Exome capture kit targets bed file (must end .bed for GATK compatability)
@@ -59,6 +59,7 @@ while getopts i:r:t:l:PABH opt; do
 done
 
 #load settings file
+RefFil=`readlink -f $RefFil`
 source $RefFil
 
 #Load script library

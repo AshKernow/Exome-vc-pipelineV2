@@ -56,6 +56,7 @@ while getopts i:r:t:l:ABH opt; do
 done
 
 #load settings file
+RefFil=`readlink -f $RefFil`
 source $RefFil
 
 #Load script library
@@ -84,3 +85,6 @@ funcRunStep
 
 #End Log
 funcWriteEndLog
+
+#CleanUp
+rm -rf *DoC

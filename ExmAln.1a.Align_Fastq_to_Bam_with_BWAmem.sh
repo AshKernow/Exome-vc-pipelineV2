@@ -57,7 +57,9 @@ while getopts i:r:l:t:PH opt; do
 done
 
 #load RefFil file
-source $RefFil #load the references required
+RefFil=`readlink -f $RefFil`
+source $RefFil 
+
 #Load script library
 source $EXOMPPLN/exome.lib.sh
 

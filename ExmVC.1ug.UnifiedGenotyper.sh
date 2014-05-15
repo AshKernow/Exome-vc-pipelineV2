@@ -29,9 +29,9 @@
 ###############################################################
 
 #set default arguments
-usage="-t 1-NumberofJobs
-ExmVC.1ug.UnifiedGenotyper.sh -i <InputFile> -r <reference_file> -t <targetfile> -l <logfile> -PABH
+usage="-t 1-<NumberofJobs> ExmVC.1ug.UnifiedGenotyper.sh -i <InputFile> -r <reference_file> -t <targetfile> -l <logfile> -PABH
 
+	<NumberofJobs> - number of jobs to split the variant calling across
 	 -i (required) - Path to list of Bam files for variant calling
 	 -r (required) - shell file to export variables with locations of reference files and resource directories
 	 -t (required) - Exome capture kit targets or other genomic intervals bed file (must end .bed for GATK compatability)
@@ -61,6 +61,7 @@ while getopts i:r:l:t:PABH opt; do
 done
 
 #load settings file
+RefFil=`readlink -f $RefFil`
 source $RefFil
 
 #Load script library
@@ -108,7 +109,7 @@ infofields="-A AlleleBalance -A BaseQualityRankSumTest -A Coverage -A HaplotypeS
 #Start Log File
 ProcessName="Variant Calling on Chromosome $CHR with GATK UnifiedGenotyper" # Description of the script - used in log
 funcWriteStartLog
-echo "Target file line range: $SttLn - $(( $Sttln + $DivLen))" >> $TmpLog
+echo "Target file line range: $SttLn - $(( $SttLn + $DivLen ))" >> $TmpLog
 
 ##Run Joint Variant Calling
 StepName="Variant Calling with GATK UnifiedGenotyper" # Description of this step - used in log
@@ -132,7 +133,7 @@ funcRunStep
 #Need to wait for all HaplotypeCaller jobs to finish and then remerge all the vcfs
 if [[ "$ArrNum" -eq 1 ]]; then
 	NextJob="Generate Base Quality Score Recalibration table"
-	QsubCmd="qsub -hold_jid $JOB_ID -o stdostde/ -e stdostde/ $EXOMSCR/ExmVC.2ug.MergeVCF.sh -d $VcfDir -s $RefFil -t $TgtBed -l $LogFil -P"
+	QsubCmd="qsub -hold_jid $JOB_ID -o stdostde/ -e stdostde/ $EXOMPPLN/ExmVC.2ug.MergeVCF.sh -i $VcfDir -r $RefFil -l $LogFil -P"
 	if [[ "$AllowMisencoded" == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
 	if [[ "$BadET" == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
 	funcPipeLine

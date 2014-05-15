@@ -51,6 +51,7 @@ while getopts i:r:l:PABH opt; do
 done
 
 #load settings file
+RefFil=`readlink -f $RefFil`
 source $RefFil
 
 #Load script library
@@ -72,10 +73,18 @@ StepName="Merge & sort with vcftools" # Description of this step - used in log
 StepCmd="vcf-concat -p $VcfDir/*vcf | vcf-sort -c > $VcfFil"
 funcRunStep
 
+#Get VCF stats with python script
+StepNam="Get VCF stats"
+StepCmd="python $EXOMPPLN/VCF_summary_Stats.py -v $VcfFil -o ${VcfFil/vcf/stats.tsv}"
+funcRunStep
+
 #Call next steps
 NextJob="Recalibrate Variant Quality"
-QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.3.VQSR.sh XXXXXXXXXXXXXXXXXXXXXXX"
-#funcPipeLine
+QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmVC.3.RecalibrateVariantQuality.sh -i $VcfFil -r $RefFil -l $LogFil -P"
+if [[ "$AllowMisencoded" == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
+if [[ "$BadET" == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi 
+funcPipeLine
 
 #End Log
 funcWriteEndLog
+rm $VcfDir

@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -cwd -l mem=10G,time=3:: -N GenBQSR
+#$ -cwd -l mem=10G,time=6:: -N GenBQSR
 
 #This script takes a bam file or a list of bam files (filename must end ".list") and generates the base quality score recalibration table using GATK
 #	InpFil - (required) - Path to Bam file or a list of BamFiles to be recalibrated
@@ -61,6 +61,7 @@ while getopts i:r:t:l:PABH opt; do
 done
 
 #load settings file
+RefFil=`readlink -f $RefFil`
 source $RefFil
 
 #Load script library
@@ -105,13 +106,13 @@ if [[ "$ChecList" == "list" ]];then
    echo $ChecList
    nJobs=$(cat $BamFil | wc -l)
    NextJob="Apply Base Quality Score Recalibration"
-   QsubCmd="qsub -t 1-$nJobs -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.6.ApplyRecalibration.sh -i $BamFil -x $RclTable -r $RefFil -t $TgtBed -l $LogFil -P"
+   QsubCmd="qsub -t 1-$nJobs -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.6.ApplyRecalibration.sh -i $BamFil -x $RclTable -r $RefFil -t $TgtBed -l $LogFil -P -K"
    if [[ "$AllowMisencoded" == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
    if [[ "$BadET" == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
    funcPipeLine
 else
     NextJob="Apply Base Quality Score Recalibration"
-    QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.6.ApplyRecalibration.sh -i $BamFil -x $RclTable -r $RefFil -t $TgtBed -l $LogFil -P"
+    QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.6.ApplyRecalibration.sh -i $BamFil -x $RclTable -r $RefFil -t $TgtBed -l $LogFil -P -K"
     if [[ "$AllowMisencoded" == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
     if [[ "$BadET" == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
     funcPipeLine

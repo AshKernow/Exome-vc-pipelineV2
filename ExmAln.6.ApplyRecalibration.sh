@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -cwd -l mem=12G,time=4:: -N AppRcl
+#$ -cwd -l mem=12G,time=6:: -N AppRcl
 
 
 #This script takes a bam file and uses a previously generated base quality score recalibration (BQSR) table to recalibrate them using GATK. If the bam file has previously been split into chromosomes (default 24, i.e. 1-22, X, Y) a list can be provided. The filename of list MUST end ".list"
@@ -8,8 +8,9 @@
 #	RefFiles - (required) - shell file to export variables with locations of reference files, jar files, and resource directories; see list below
 #	TgtBed - (required) - Exome capture kit targets bed file (must end .bed for GATK compatability)
 #	LogFil - (optional) - File for logging progress
-#	Flag - A - AllowMisencoded - see GATK manual, causes GATK to ignore abnormally high quality scores that would otherwise indicate that the quality score encoding was incorrect
 #	Flag - P - PipeLine - call the next step in the pipeline at the end of the job
+#	Flag - K - KillFile - this will cause the script to delete the original bam file once the recalibration has successfully completed
+#	Flag - A - AllowMisencoded - see GATK manual, causes GATK to ignore abnormally high quality scores that would otherwise indicate that the quality score encoding was incorrect
 #	Flag - B - BadET - prevent GATK from phoning home
 #	Help - H - (flag) - get usage information
 
@@ -45,9 +46,10 @@ ExmAln.6.ApplyRecalibration.sh -i <InputFile> -x <GATK BQSR table> -r <reference
 AllowMisencoded="false"
 PipeLine="false"
 BadET="false"
+KillFile="false"
 
 #get arguments
-while getopts i:x:r:t:l:PABH opt; do
+while getopts i:x:r:t:l:PKABH opt; do
 	case "$opt" in
 		i) InpFil="$OPTARG";;
 		x) RclTab="$OPTARG";;
@@ -55,6 +57,7 @@ while getopts i:x:r:t:l:PABH opt; do
 		t) TgtBed="$OPTARG";; 
 		l) LogFil="$OPTARG";;
 		P) PipeLine="true";;
+		K) KillFile="true";;
 		A) AllowMisencoded="true";;
 		B) BadET="true";;
 		H) echo "$usage"; exit;;
@@ -62,6 +65,7 @@ while getopts i:x:r:t:l:PABH opt; do
 done
 
 #load settings file
+RefFil=`readlink -f $RefFil`
 source $RefFil
 
 #Load script library
@@ -141,5 +145,5 @@ fi
 funcWriteEndLog
 
 #Clean up
-if [[ -e $RclFil ]]; then rm $BamFil ${BamFil/bam/bai}; fi
+if [[ -e $RclFil ]] && [[ "$KillFile" == "true" ]]; then rm $BamFil ${BamFil/bam/bai}; fi
 if [[ "$TmpTar" != "$TgtBed" ]]; then rm $TmpTar; fi

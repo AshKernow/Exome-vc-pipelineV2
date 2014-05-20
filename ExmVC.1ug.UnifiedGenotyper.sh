@@ -94,7 +94,7 @@ done
 ###
 
 BamFil=`readlink -f $InpFil` #resolve absolute path to bam
-VcfNam=`basename $BamFil | sed s/.bam// | sed s/.list//` #a name to use for the various files
+VcfNam=`basename $BamFil | sed s/_recalibrated// | sed s/_bams// | sed s/.bam// | sed s/.list//` #a name to use for the various files
 if [[ -z "$LogFil" ]];then LogFil=$VcfNam.CallVC.log; fi # a name for the log file
 VcfDir=$VcfNam.splitfiles; mkdir -p $VcfDir # Directory to output slices to
 VcfFil=$VcfDir/$VcfNam.$ArrNum.raw_variants.vcf #Output File
@@ -130,9 +130,9 @@ StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
 funcGatkAddArguments
 funcRunStep
 
-#Need to wait for all HaplotypeCaller jobs to finish and then remerge all the vcfs
+#Need to wait for all UnifiedGenotyper jobs to finish and then remerge all the vcfs
 if [[ "$ArrNum" -eq 1 ]]; then
-	NextJob="Generate Base Quality Score Recalibration table"
+	NextJob="Remerge vcf files"
 	QsubCmd="qsub -hold_jid $JOB_ID -o stdostde/ -e stdostde/ $EXOMPPLN/ExmVC.2ug.MergeVCF.sh -i $VcfDir -r $RefFil -l $LogFil -P"
 	if [[ "$AllowMisencoded" == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
 	if [[ "$BadET" == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi

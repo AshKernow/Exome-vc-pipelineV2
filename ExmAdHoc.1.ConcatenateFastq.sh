@@ -7,13 +7,30 @@
 # Need to also specifiy "SE" for single end or "PE" for paired end
 # If paired end, the files for paired ends should be marked "_R1_" and "_R2_"
 # Generally file names should be in the format <SAMPLENAMELANEETCETC>_R<PAIRNUMBER>_<Section_NUMBER>.fastq.gz
+#	FqDir - (required) - A directory containing fastq files
+#	Type - (required) - "PE" for paired end, "SE" for single end
+#	OutNam - (optional) - A name for the output file. If this is not provided it will be derived from the directory name.
+#	Help - H - (flag) - get usage information
 
+#list of required reference files:
+# $EXOMPPLN - directory containing exome analysis pipeline scripts
+
+#list of required tools:
+# samtools <http://samtools.sourceforge.net/> <http://sourceforge.net/projects/samtools/files/>
+# java <http://www.oracle.com/technetwork/java/javase/overview/index.html>
+# picard <http://picard.sourceforge.net/> <http://sourceforge.net/projects/picard/files/>
+
+## This file also require exome.lib.sh - which contains various functions used throughout my Exome analysis scripts; this file should be in the same directory as this script
+
+###############################################################
+
+#set default arguments
 usage="
 ExmAdHoc.1.ConcatenateFastq.sh -i <InputDirectory> -t <Type>
 
 	 -i (required) - Path to directory containing fastq.gz files
 	 -t (required) - \"PE\" for paired-end \"SE\" for single-end
-	 -o (optional) - Output filename - if not specified the directory name will be used
+	 -o (optional) - Output filename - if not provided the directory name will be used
 	 -H (flag) - echo this message and exit
 "
 
@@ -36,12 +53,12 @@ fi
 
 #check for PE/SE specification
 if [[ "$Type" != "PE" ]] && [[ "$Type" != "SE" ]]; then
-	echo  "Need specify paired-end or single-end"
+	echo  "Need to specify paired-end or single-end"
 	echo $usage
 	exit
 fi
 
-if [[ -z "$OutNam" ]]; then OutNam=$FqDir; fi #Output file name
+if [[ -z "$OutNam" ]]; then OutNam=$FqDir; fi #Output file name if not provided
 
 if [[ "$Type" == "SE" ]]; then
 	echo "Single End"

@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -cwd -l mem=10G,time=4:: -N LocRln
 
-#This script takes a bam file and perfomrs local indel realignment using GATK
+#This script takes a bam file and performs local indel realignment using GATK
 #The script by default runs across the entire bam in a single pass, for increased speed it can split the job across chromosome. If you wish to run it as an array across 24 Chromosomes simply call the script with "-t 1-24"
 #	InpFil - (required) - Path to Bam file to be realigned
 #	RefFiles - (required) - shell file to export variables with locations of reference files, jar files, and resource directories; see list below
@@ -31,7 +31,9 @@
 
 #set default arguments
 usage="
-ExmAln.4.LocalRealignment.sh -i <InputFile> -r <reference_file> -t <targetfile> -l <logfile> -PABH
+ ExmAln.4.LocalRealignment.sh -i <InputFile> -r <reference_file> -t <targetfile> -l <logfile> -PABH
+ or
+ -t 1-24 ExmAln.4.LocalRealignment.sh -i <InputFile> -r <reference_file> -t <targetfile> -l <logfile> -PABH
 
 	 -i (required) - Path to Bam file or \".list\" file containing a multiple paths
 	 -r (required) - shell file to export variables with locations of reference files and resource directories

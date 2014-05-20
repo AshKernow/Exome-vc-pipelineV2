@@ -1,8 +1,8 @@
 #!/bin/bash
 #$ -cwd -l mem=10G,time=6:: -N GenBQSR
 
-#This script takes a bam file or a list of bam files (filename must end ".list") and generates the base quality score recalibration table using GATK
-#	InpFil - (required) - Path to Bam file or a list of BamFiles to be recalibrated
+#This script takes a bam file or a list of bam files  and generates the base quality score recalibration table using GATK
+#	InpFil - (required) - Path to Bam file or a list of BamFiles to be recalibrated, if a list filename must end ".list"
 #	RefFiles - (required) - shell file to export variables with locations of reference files, jar files, and resource directories; see list below
 #	TgtBed - (required) - Exome capture kit targets bed file (must end .bed for GATK compatability)
 #	LogFil - (optional) - File for logging progress

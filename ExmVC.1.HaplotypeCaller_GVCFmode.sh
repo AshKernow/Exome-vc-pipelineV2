@@ -60,6 +60,7 @@ while getopts i:r:l:t:PABH opt; do
 done
 
 #load settings file
+RefFil=`readlink -f $RefFil`
 source $RefFil
 
 #Load script library
@@ -67,18 +68,18 @@ source $EXOMPPLN/exome.lib.sh #library functions begin "func"
 
 
 #Set local Variables
-InpNam=`basename ${InpFil/.bam/}`
-InpNam=`basename ${InpNam/.list/}`
-VcfLst=HCgVCF.$InpNam.list #File listing paths to recalibrated bams
-VcfDir=$InpNam"_gVCF"; mkdir -p $VcfDir #Output Directory
+funcGetTargetFile
+if [[ "$ArrNum" != "undefined" ]]; then 
+	InpNam=`basename ${InpNam/.list/}`
+	VcfLst=HCgVCF.$InpNam.list #File listing paths to gVCF
+fi
 ArrNum=$SGE_TASK_ID
 funcFilfromList #if the input is a list get the appropriate input file for this job of the array --> $InpFil
 BamFil=`readlink -f $InpFil` #resolve absolute path to bam
-BamNam=`basename $BamFil` 
+BamNam=`basename $BamFil | sed s/.bam//`
 BamNam=${BamNam/.bam/} # a name for the output files
-BamNam=${BamNam/.list/} 
 if [[ -z $LogFil ]]; then LogFil=$BamNam.HCgVCF.log; fi # a name for the log file
-VcfFil=$VcfDir/$BamNam.gvcf #Output File
+VcfFil=$BamNam.g.vcf #Output File
 GatkLog=$BamNam.HCgVCF.gatklog #a log for GATK to output to, this is then trimmed and added to the script log
 TmpLog=$BamNam.HCgVCF.temp.log #temporary log file
 TmpDir=$BamNam.HCgVCF.tempdir; mkdir -p $TmpDir #temporary directory
@@ -88,7 +89,7 @@ infofields="-A AlleleBalance -A BaseQualityRankSumTest -A Coverage -A HaplotypeS
 ProcessName="Genomic VCF generatation with GATK HaplotypeCaller" # Description of the script - used in log
 funcWriteStartLog
 
-##Run Joint Variant Calling
+##Run genomic VCF generation
 StepNam="gVCF generation with GATK HaplotypeCaller"
 StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -T HaplotypeCaller
@@ -113,7 +114,7 @@ funcRunStep
 
 #Call next step
 #NextJob="Get basic bam metrics"
-#QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.3a.Bam_metrics.sh -i $RclLst -r $RefFil -l $LogFil -Q"
+#QsubCmd="qsub -hold_jid $JOB_ID -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.3a.Bam_metrics.sh -i $RclLst -r $RefFil -l $LogFil -Q"
 #funcPipeLine
 
 #End Log

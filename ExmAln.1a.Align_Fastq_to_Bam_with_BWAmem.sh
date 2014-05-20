@@ -9,7 +9,7 @@
 #
 #	Samp1_GATCAG_R1.fastq.gz	@RG\tID:Samp1_GATCAG\tSM:Samp1\tLB:Lib245\tPL:ILLUMINA\tCN:BISRColumbia	Samp1_GATCAG_R2.fastq.gz
 #
-#						- If the table contains multiple lines the script run in an array job, each job will read the line from the table corresponding to its $SGE_TASK_ID
+#						- If the table contains multiple lines run the script as an array job, each job will read the line from the table corresponding to its $SGE_TASK_ID
 #	RefFiles - (required) - shell file to export variables with locations of reference files and resource directories; see list below
 #	LogFil - (optional) - File for logging progress
 #	TgtBed - (optional) - Exome capture kit targets bed file (must end .bed for GATK compatability) - only required if calling pipeline

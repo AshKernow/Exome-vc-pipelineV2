@@ -70,12 +70,11 @@ for WhichCode in CodingTypes:
 			ESPscore=float(INFOdict.get('ESPfreq',2))
 			MutationFunct=str(INFOdict.get('VarFunc','none'))
 			MutationClass=str(INFOdict.get('VarClass','none'))
-			#KGscore=float(INFOdict.get('1KG.score',0))
-			#MutationFunct=str(INFOdict.get('function','none'))
-			#MutationClass=str(INFOdict.get('functionClass','none'))
 			ID=str(linelist[2])
-			REF=str(linelist[3])
-			ALT=str(linelist[4])
+			REF=linelist[3].split(",")
+			REF=[ str(i) for i in REF ]
+			ALT=linelist[4].split(",")
+			ALT=[ str(i) for i in ALT ]
 			#Known or novel
 			Known=False
 			if 'DB' in INFOcolumnList:
@@ -84,14 +83,14 @@ for WhichCode in CodingTypes:
 				Known=True
 			#Snp or Indel
 			InDel=True
-			if REF in Nucleotides and ALT in Nucleotides:
+			if all(i in Nucleotides for i in REF) and all(i in Nucleotides for i in ALT):
 				InDel=False
 			#Ti or Tv
 			Transversion=False
 			Transition=False
-			if (REF=='A' and ALT=='G') or (REF=='G' and ALT=='A') or (REF=='C' and ALT=='T') or (REF=='T' and ALT=='C'):
+			if (REF[0]=='A' and ALT[0]=='G') or (REF[0]=='G' and ALT[0]=='A') or (REF[0]=='C' and ALT[0]=='T') or (REF[0]=='T' and ALT[0]=='C'):
 				Transition=True
-			if (REF=='C' and ALT=='A') or (REF=='A' and ALT=='C') or (REF=='G' and ALT=='C') or (REF=='C' and ALT=='G') or (REF=='T' and ALT=='A') or (REF=='A' and ALT=='T') or (REF=='T' and ALT=='G') or (REF=='G' and ALT=='T'):
+			if (REF[0]=='C' and ALT[0]=='A') or (REF[0]=='A' and ALT[0]=='C') or (REF[0]=='G' and ALT[0]=='C') or (REF[0]=='C' and ALT[0]=='G') or (REF[0]=='T' and ALT[0]=='A') or (REF[0]=='A' and ALT[0]=='T') or (REF[0]=='T' and ALT[0]=='G') or (REF[0]=='G' and ALT[0]=='T'):
 				Transversion=True
 			codingPass=False
 			if WhichCode=="Coding variants" and MutationFunct in CodingCodes:
@@ -112,8 +111,6 @@ for WhichCode in CodingTypes:
 							if str(GT)!= "0/0":
 								if str(GT)=="0/1":
 									heterozygousCount[i]=heterozygousCount[i]+1
-								if str(GT)=="0/0":
-									referenceCount[i]=referenceCount[i]+1
 								if str(GT)=="1/1":
 									homozygousCount[i]=homozygousCount[i]+1
 						else:

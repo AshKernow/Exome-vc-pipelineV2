@@ -66,7 +66,7 @@ source $EXOMPPLN/exome.lib.sh #library functions begin "func"
 ArrNum=$SGE_TASK_ID
 funcFilfromList
 VcfFil=`readlink -f $InpFil` #resolve absolute path to bam
-HapChec=$(head -n20 $VcfFil.vcf | grep "HaplotypeCaller" | wc -l) #check which VC tool was used
+HapChec=$(head -n20 $VcfFil | grep "HaplotypeCaller" | wc -l) #check which VC tool was used
 if [[ $HapChec -eq 1 ]]; then
 	InfoFields="-an DP -an QD -an FS -an MQRankSum -an ReadPosRankSum"
 else

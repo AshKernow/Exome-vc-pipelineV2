@@ -67,6 +67,7 @@ if [[ "$Type" == "SE" ]]; then
 	echo "----Fastq List---"
 	echo "$FqFils"
 	zcat $FqFils | gzip > $OutNam".fastq.gz"
+	echo "Done"
 elif [[ "$Type" == "PE" ]]; then
 	echo "Paired End"
 	#if paired end do R1 first then R2
@@ -74,8 +75,10 @@ elif [[ "$Type" == "PE" ]]; then
 	echo "----Fastq List R1 ---"
 	echo "$FqFils"
 	zcat $FqFils | gzip > $OutNam"_R1.fastq.gz"
+	echo "Done R1"
 	FqFils=$(find $FqDir | grep "_R2_" | grep "fastq.gz" | uniq | sort)
 	echo "----Fastq List R2 ---"
 	echo "$FqFils"
 	zcat $FqFils | gzip > $OutNam"_R2.fastq.gz"
+	echo "Done R2"
 fi

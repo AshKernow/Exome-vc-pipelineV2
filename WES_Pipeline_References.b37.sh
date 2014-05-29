@@ -23,10 +23,10 @@ export ANNHDB="/ifs/home/c2b2/af_lab/ads2202/scratch/src/annovar/humandb/" #Loca
 export ETKEY="$EXOMRES/ads2202_c2b2.columbia.edu.key"
 
 #Capture Kit Target Files
-export AgtV2="$EXOMRES/SureSelect_All_Exon_V2.hg19.ordered.bed"
-export AgtV4="$EXOMRES/SureSelect_All_Exon_V4_hg19.ordered.bed"
+export AgtV2="$EXOMRES/SureSelect_All_Exon_V2.b37.ordered.bed"
+export AgtV4="$EXOMRES/SureSelect_All_Exon_V4_b37.ordered.bed"
 export AgtV5="$EXOMRES/SureSelect_Human_All_Exon_V5_UTRs_Covered.ordered.bed"
-export NbgV2="$EXOMRES/SeqCap_EZ_Exome_v2.hg19.targets.bed"
-export NbgV3="$EXOMRES/SeqCap_EZ_Exome_v3.hg19.targets.bed"
-export IllTS="$EXOMRES/truseq_exome_targeted_regions.hg19.ordered.bed"
+export NbgV2="$EXOMRES/SeqCap_EZ_Exome_v2.b37.targets.bed"
+export NbgV3="$EXOMRES/SeqCap_EZ_Exome_v3.b37.targets.bed"
+export IllTS="$EXOMRES/truseq_exome_targeted_regions.b37.ordered.bed"
 export TGTCODES="AgtV2:AgtV4:AgtV5:NbgV2:NbgV3:IllTS"

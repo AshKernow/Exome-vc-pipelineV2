@@ -89,6 +89,7 @@ else
 fi
 if [[ "$BUILD" = "hg19" ]]; then Chr=chr$Chr; fi
 RalFil=$RalDir/$BamNam.realigned$ChrNam.bam # the output - a realigned bam file for the CHR
+FlgStat=$RalDir/$BamNam.realigned$ChrNam.flagstat # file to output samtools flagstats on the realigned file to
 TgtFil=$RalDir/$BamNam.target_intervals$ChrNam.list #target intervals file created by GATK RealignerTargetCreator
 GatkLog=$BamNam.LocReal$ChrNam.gatklog #a log for GATK to output to, this is then trimmed and added to the script log
 TmpLog=$LogFil.LocReal$ChrNam.temp.log #temporary log file 
@@ -138,6 +139,11 @@ fi
 funcGatkAddArguments
 funcRunStep
 
+#Get flagstat
+StepName="Output flag stats using Samtools"
+StepCmd="samtools flagstat $RalFil > $FlgStat"
+funcRunStep
+
 #Call next step - if array by chromosome only the first job of the array calls the next job and it is called with a hold until all of the array jobs are finished
 if [[ "$ArrNum" -eq 1 ]]; then
 	find `pwd` | grep -E bam$ | grep $RalDir | sort -V > $RalLst #generate realigned file list
@@ -159,4 +165,4 @@ funcWriteEndLog
 
 #Clean up
 rm $TgtFil
-#if [[ -e $RalFil ]]; then rm $BamFil ${BamFil/bam/bai}; fi
+if [[ -e $RalFil ]]; then rm $BamFil ${BamFil/bam/bai}; fi

@@ -88,6 +88,7 @@ else
 	Chr=$(echo $SGE_TASK_ID | sed s/24/Y/ | sed s/23/X/)
 	if [[ "$BUILD" = "hg19" ]]; then Chr=chr$Chr; fi
 fi
+FlgStat=${RclFil/bam/flagstat} # file to output samtools flagstats on the final file to
 GatkLog=$BamNam.AppBQSR.gatklog #a log for GATK to output to, this is then trimmed and added to the script log
 TmpLog=$BamNam.AppBQSR.temp.log #temporary log file
 TmpDir=$BamNam.AppBQSR.tempdir; mkdir -p $TmpDir #temporary directory
@@ -117,6 +118,11 @@ StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  --filter_mismatching_base_and_quals
  -log $GatkLog" #command to be run
 funcGatkAddArguments
+funcRunStep
+
+#Get flagstat
+StepName="Output flag stats using Samtools"
+StepCmd="samtools flagstat $RclFil > $FlgStat"
 funcRunStep
 
 #Call next step

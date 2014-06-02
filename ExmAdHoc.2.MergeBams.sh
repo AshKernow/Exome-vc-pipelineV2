@@ -117,10 +117,13 @@ StepName="Output flag stats using Samtools"
 StepCmd="samtools flagstat $DdpFil > $FlgStat"
 funcRunStep
 
+#copy the index for idxstat
+cp ${DdpFil/bam/bai} $DdpFil.bai
 #get index stats
 StepName="Output idx stats using Samtools"
 StepCmd="samtools idxstats $DdpFil > $IdxStat"
 funcRunStep
+rm $DdpFil.bai
 
 #Call next steps
 NextJob="Run Local realignment"

@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -l mem=4G,time=:30: -cwd -S /bin/bash -N TerModBam
+#$ -l mem=4G,time=2:: -cwd -S /bin/bash -N TerModBam
 
 # This script is to fix a problem with paired-end Bam files that were aligned with old verions of bwa in which "/3" was added to the mate in each read pair rather than /1 and /2, as in:
 #D8GSQ5P1:4:1102:10621:68803#0	73	1	10009	0	101M	=	10009	0	ACCCTAACCCTAACCCTAACCCTA....
@@ -46,6 +46,6 @@ if [[ -z $OutBam ]]; then
 fi
 
 # bam --> sam | use awk to make modification | sam --> bam
-samtools view -h $InpBam | awk 'BEGIN { OFS = "\t" } { gsub(/#0\/3$/,"#0",$1); print $0 }' | samtools view -bS - > $OutBam
+samtools view -h $InpBam | awk 'BEGIN { OFS = "\t" } { gsub(/#0\/3$/,"#0",$1); gsub(/#0\/4$/,"#0",$1); print $0 }' | samtools view -bS - > $OutBam
 
 echo "Completed bam modification"

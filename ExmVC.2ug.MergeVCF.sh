@@ -87,4 +87,4 @@ funcPipeLine
 
 #End Log
 funcWriteEndLog
-rm $VcfDir
+rm -r $VcfDir

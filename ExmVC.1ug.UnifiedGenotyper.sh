@@ -3,14 +3,13 @@
 
 #This script takes a bam file or a list of bam files (filename must end ".list") and runs variant calling using the UnifiedGenotyper
 # The job should be called as an array. The the variants calling will then be split into X jobs, where X is the number of jobs in the array. This should be larger for bigger jobs (more samples).
-#	InpFil - (required) - A list of bams for variant calling. List file name must end ".list". 
-#	RefFiles - (required) - shell file to export variables with locations of reference files, jar files, and resource directories; see list below
-#	TgtBed - (optional) - Exome capture kit targets bed file (must end .bed for GATK compatability) 
-#	LogFil - (optional) - File for logging progress
-#	Flag - A - AllowMisencoded - see GATK manual, causes GATK to ignore abnormally high quality scores that would otherwise indicate that the quality score encoding was incorrect
-#	Flag - P - PipeLine - call the next step in the pipeline at the end of the job
-#	Flag - B - BadET - prevent GATK from phoning home
-#	Help - H - (flag) - get usage information
+#    InpFil - (required) - A list of bams for variant calling. List file name must end ".list". 
+#    RefFil - (required) - shell file containing variables with locations of reference files, jar files, and resource directories; see list below for required variables
+#    TgtBed - (optional) - Exome capture kit targets bed file (must end .bed for GATK compatability) ; may be specified using a code corresponding to a variable in the RefFil giving the path to the target file
+#    LogFil - (optional) - File for logging progress
+#    Flag - P - PipeLine - call the next step in the pipeline at the end of the job
+#    Flag - B - BadET - prevent GATK from phoning home
+#    Help - H - (flag) - get usage information
 
 #list of required vairables in reference file:
 # $REF - reference genome in fasta format - must have been indexed using 'bwa index ref.fa'
@@ -24,22 +23,21 @@
 # java <http://www.oracle.com/technetwork/java/javase/overview/index.html>
 # GATK <https://www.broadinstitute.org/gatk/> <https://www.broadinstitute.org/gatk/download>
 
-## This file also require exome.lib.sh - which contains various functions used throughout my Exome analysis scripts; this file should be in the same directory as this script
+## This file also requires exome.lib.sh - which contains various functions used throughout the Exome analysis scripts; this file should be in the same directory as this script
 
 ###############################################################
 
 #set default arguments
 usage="-t 1-<NumberofJobs> ExmVC.1ug.UnifiedGenotyper.sh -i <InputFile> -r <reference_file> -t <targetfile> -l <logfile> -PABH
 
-	<NumberofJobs> - number of jobs to split the variant calling across
-	 -i (required) - Path to list of Bam files for variant calling
-	 -r (required) - shell file to export variables with locations of reference files and resource directories
-	 -t (required) - Exome capture kit targets or other genomic intervals bed file (must end .bed for GATK compatability)
-	 -l (optional) - Log file
-	 -P (flag) - Call next step of exome analysis pipeline after completion of script
-	 -A (flag) - AllowMisencoded - see GATK manual
-	 -B (flag) - Prevent GATK from phoning home
-	 -H (flag) - echo this message and exit
+    <NumberofJobs> - number of jobs to split the variant calling across
+     -i (required) - Path to list of Bam files for variant calling
+     -r (required) - shell file containing variables with locations of reference files and resource directories
+     -t (required) - Exome capture kit targets or other genomic intervals bed file (must end .bed for GATK compatability)
+     -l (optional) - Log file
+     -P (flag) - Call next step of exome analysis pipeline after completion of script
+     -B (flag) - Prevent GATK from phoning home
+     -H (flag) - echo this message and exit
 "
 
 AllowMisencoded="false"
@@ -47,28 +45,30 @@ PipeLine="false"
 BadET="false"
 
 PipeLine="false"
-while getopts i:r:l:t:PABH opt; do
-	case "$opt" in
-		i) InpFil="$OPTARG";;
-		r) RefFil="$OPTARG";; 
-		l) LogFil="$OPTARG";;
-		t) TgtBed="$OPTARG";; 
-		P) PipeLine="true";;
-		A) AllowMisencoded="true";;
-		B) BadET="true";;
-		H) echo "$usage"; exit;;
+while getopts i:r:l:t:PBH opt; do
+    case "$opt" in
+        i) InpFil="$OPTARG";;
+        r) RefFil="$OPTARG";; 
+        l) LogFil="$OPTARG";;
+        t) TgtBed="$OPTARG";; 
+        P) PipeLine="true";;
+        B) BadET="true";;
+        H) echo "$usage"; exit;;
   esac
 done
 
-#load settings file
+#check all required paramaters present
+if [[ ! -e "$InpFil" ]] || [[ ! -e "$RefFil" ]] || [[ ! -e "$TgtBed" ]]; then echo "Missing/Incorrect required arguments"; echo "$usage"; exit; fi
+
+#Call the RefFil to load variables
 RefFil=`readlink -f $RefFil`
 source $RefFil
 
 #Load script library
-source $EXOMPPLN/exome.lib.sh #library functions begin "func"
+source $EXOMPPLN/exome.lib.sh #library functions begin "func" #library functions begin "func"
 
 #Set local Variables
-funcGetTargetFile
+funcGetTargetFile #If the target file has been specified using a code, get the full path from the exported variable
 # The target file needs to be divided evenly between all the jobs. i.e. if the target file is 1000 lines long and there are 40 jobs, each job should have 25 lines of the target file
 # bash arithmetic division actually gives the quotient, so if there are 1010 lines and 40 jobs the division would still give 25 lines per a job and the last 10 lines would be lost
 # to compensate for this we will find the remainder (RemTar) and then add an extra line to the first $RemTar jobs
@@ -83,12 +83,12 @@ DivLen=0
 echo $RemTar
 echo $SttLn
 for ((i=1; i <= $ArrNum; i++)); do
-	SttLn=$(( SttLn + DivLen ))
-	if [[ $i -le $RemTar ]]; then
-		DivLen=$(( QuoTar + 1 ))
-		else
-		DivLen=$QuoTar
-	fi
+    SttLn=$(( SttLn + DivLen ))
+    if [[ $i -le $RemTar ]]; then
+        DivLen=$(( QuoTar + 1 ))
+        else
+        DivLen=$QuoTar
+    fi
 done
 
 ###
@@ -127,16 +127,16 @@ StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  $infofields
  -rf BadCigar
  -log $GatkLog" #command to be run
-funcGatkAddArguments
+funcGatkAddArguments # Adds additional parameters to the GATK command depending on flags (e.g. -B or -F)
 funcRunStep
 
 #Need to wait for all UnifiedGenotyper jobs to finish and then remerge all the vcfs
 if [[ "$ArrNum" -eq 1 ]]; then
-	NextJob="Remerge vcf files"
-	QsubCmd="qsub -hold_jid $JOB_ID -o stdostde/ -e stdostde/ $EXOMPPLN/ExmVC.2ug.MergeVCF.sh -i $VcfDir -r $RefFil -l $LogFil -P"
-	if [[ "$AllowMisencoded" == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
-	if [[ "$BadET" == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
-	funcPipeLine
+    NextJob="Remerge vcf files"
+    QsubCmd="qsub -hold_jid $JOB_ID -o stdostde/ -e stdostde/ $EXOMPPLN/ExmVC.2ug.MergeVCF.sh -i $VcfDir -r $RefFil -l $LogFil -P"
+    if [[ "$AllowMisencoded" == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
+    if [[ "$BadET" == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
+    funcPipeLine
 fi
 
 #End Log

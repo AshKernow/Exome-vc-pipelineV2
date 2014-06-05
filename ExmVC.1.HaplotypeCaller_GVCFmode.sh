@@ -2,14 +2,13 @@
 #$ -cwd  -l mem=12G,time=4:: -N HCgVCF
 
 #This script takes a bam file or a list of bam files (filename must end ".list") and runs variant calling using the HaplotypeCaller in gVCF mode
-#	InpFil - (required) - Path to Bam file to be aligned. Alternatively a file with a list of bams can be provided and the script run as an array job. List file name must end ".list"
-#	RefFiles - (required) - shell file to export variables with locations of reference files, jar files, and resource directories; see list below
-#	TgtBed - (optional) - Exome capture kit targets bed file (must end .bed for GATK compatability) - only required if calling pipeline
-#	LogFil - (optional) - File for logging progress
-#	Flag - A - AllowMisencoded - see GATK manual, causes GATK to ignore abnormally high quality scores that would otherwise indicate that the quality score encoding was incorrect
-#	Flag - P - PipeLine - call the next step in the pipeline at the end of the job
-#	Flag - B - BadET - prevent GATK from phoning home
-#	Help - H - (flag) - get usage information
+#    InpFil - (required) - Path to Bam file to be aligned. Alternatively a file with a list of bams can be provided and the script run as an array job. List file name must end ".list"
+#    RefFil - (required) - shell file containing variables with locations of reference files, jar files, and resource directories; see list below for required variables
+#    TgtBed - (optional) - Exome capture kit targets bed file (must end .bed for GATK compatability) ; may be specified using a code corresponding to a variable in the RefFil giving the path to the target file- only required if calling pipeline
+#    LogFil - (optional) - File for logging progress
+#    Flag - P - PipeLine - call the next step in the pipeline at the end of the job
+#    Flag - B - BadET - prevent GATK from phoning home
+#    Help - H - (flag) - get usage information
 
 #list of required vairables in reference file:
 # $REF - reference genome in fasta format - must have been indexed using 'bwa index ref.fa'
@@ -23,7 +22,7 @@
 # java <http://www.oracle.com/technetwork/java/javase/overview/index.html>
 # GATK <https://www.broadinstitute.org/gatk/> <https://www.broadinstitute.org/gatk/download>
 
-## This file also require exome.lib.sh - which contains various functions used throughout my Exome analysis scripts; this file should be in the same directory as this script
+## This file also requires exome.lib.sh - which contains various functions used throughout the Exome analysis scripts; this file should be in the same directory as this script
 
 ###############################################################
 
@@ -31,14 +30,13 @@
 usage="
 ExmVC.1.HaplotypeCaller_GVCFmode.sh -i <InputFile> -r <reference_file> -t <targetfile> -l <logfile> -PABH
 
-	 -i (required) - Path to Bam file for variant calling or \".list\" file containing a multiple paths
-	 -r (required) - shell file to export variables with locations of reference files and resource directories
-	 -t (required) - Exome capture kit targets or other genomic intervals bed file (must end .bed for GATK compatability)
-	 -l (optional) - Log file
-	 -P (flag) - Call next step of exome analysis pipeline after completion of script
-	 -A (flag) - AllowMisencoded - see GATK manual
-	 -B (flag) - Prevent GATK from phoning home
-	 -H (flag) - echo this message and exit
+     -i (required) - Path to Bam file for variant calling or \".list\" file containing a multiple paths
+     -r (required) - shell file containing variables with locations of reference files and resource directories
+     -t (required) - Exome capture kit targets or other genomic intervals bed file (must end .bed for GATK compatability)
+     -l (optional) - Log file
+     -P (flag) - Call next step of exome analysis pipeline after completion of script
+     -B (flag) - Prevent GATK from phoning home
+     -H (flag) - echo this message and exit
 "
 
 AllowMisencoded="false"
@@ -46,32 +44,34 @@ PipeLine="false"
 BadET="false"
 
 PipeLine="false"
-while getopts i:r:l:t:PABH opt; do
-	case "$opt" in
-		i) InpFil="$OPTARG";;
-		r) RefFil="$OPTARG";; 
-		l) LogFil="$OPTARG";;
-		t) TgtBed="$OPTARG";; 
-		P) PipeLine="true";;
-		A) AllowMisencoded="true";;
-		B) BadET="true";;
-		H) echo "$usage"; exit;;
+while getopts i:r:l:t:PBH opt; do
+    case "$opt" in
+        i) InpFil="$OPTARG";;
+        r) RefFil="$OPTARG";; 
+        l) LogFil="$OPTARG";;
+        t) TgtBed="$OPTARG";; 
+        P) PipeLine="true";;
+        B) BadET="true";;
+        H) echo "$usage"; exit;;
   esac
 done
 
-#load settings file
+#check all required paramaters present
+if [[ ! -e "$InpFil" ]] || [[ ! -e "$RefFil" ]] || [[ ! -e "$TgtBed" ]]; then echo "Missing/Incorrect required arguments"; echo "$usage"; exit; fi
+
+#Call the RefFil to load variables
 RefFil=`readlink -f $RefFil`
 source $RefFil
 
 #Load script library
-source $EXOMPPLN/exome.lib.sh #library functions begin "func"
+source $EXOMPPLN/exome.lib.sh #library functions begin "func" #library functions begin "func"
 
 
 #Set local Variables
-funcGetTargetFile
+funcGetTargetFile #If the target file has been specified using a code, get the full path from the exported variable
 if [[ "$ArrNum" != "undefined" ]]; then 
-	InpNam=`basename ${InpNam/.list/}`
-	VcfLst=HCgVCF.$InpNam.list #File listing paths to gVCF
+    InpNam=`basename ${InpNam/.list/}`
+    VcfLst=HCgVCF.$InpNam.list #File listing paths to gVCF
 fi
 ArrNum=$SGE_TASK_ID
 funcFilfromList #if the input is a list get the appropriate input file for this job of the array --> $InpFil
@@ -109,7 +109,7 @@ StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -rf BadCigar
  $infofields
  -log $GatkLog" #command to be run
-funcGatkAddArguments
+funcGatkAddArguments # Adds additional parameters to the GATK command depending on flags (e.g. -B or -F)
 funcRunStep
 
 #Call next step

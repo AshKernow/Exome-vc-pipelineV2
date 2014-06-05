@@ -2,10 +2,10 @@
 #$ -cwd -l mem=10G,time=2:: -N GATKAnn
 
 #This script takes a vcf file and uses GATK to reannotate with various variant quality and calling information.
-#	InpFil - (required) - A vcf file to be annotated
-#	RefFiles - (required) - Reference File: a shell script that exports variables with locations of reference files and resource directories; see list below
-#	LogFil - (optional) - File for logging progress
-#	Help - H - (flag) - get usage information
+#    InpFil - (required) - A vcf file to be annotated
+#    RefFil - (required) - shell file containing variables with locations of reference files and resource directories; see list below for required variables for required variables
+#    LogFil - (optional) - File for logging progress
+#    Help - H - (flag) - get usage information
 
 #list of required variables in Reference File:
 # $REF - reference genome in fasta format
@@ -18,7 +18,7 @@
 # java <http://www.oracle.com/technetwork/java/javase/overview/index.html>
 # GATK <https://www.broadinstitute.org/gatk/> <https://www.broadinstitute.org/gatk/download>
 
-## This file also require exome.lib.sh - which contains various functions used throughout my Exome analysis scripts; this file should be in the same directory as this script
+## This file also requires exome.lib.sh - which contains various functions used throughout the Exome analysis scripts; this file should be in the same directory as this script
 
 ###############################################################
 
@@ -26,34 +26,35 @@
 usage="
 ExmAdHoc.3.GATKAnnotateVCF.sh -i <InputFile> -r <reference_file> -t <target intervals file> -l <logfile> -H
 
-	 -i (required) - Path \".list\" file containing a multiple paths to bams. Name of input file used as name of output.
-	 -r (required) - shell file to export variables with locations of reference files and resource directories
-	 -l (optional) - Log file
-	 -H (flag) - echo this message and exit
+     -i (required) - Path \".list\" file containing a multiple paths to bams. Name of input file used as name of output.
+     -r (required) - shell file containing variables with locations of reference files and resource directories
+     -l (optional) - Log file
+     -B (flag) - Prevent GATK from phoning home
+     -H (flag) - echo this message and exit
 "
 
-Metrix="false"
-PipeLine="false"
+BadET="false"
 
 #get arguments
 while getopts i:r:l:H opt; do
-	case "$opt" in
-		i) InpFil="$OPTARG";;
-		r) RefFil="$OPTARG";; 
-		l) LogFil="$OPTARG";;
-		H) echo "$usage"; exit;;
-	esac
+    case "$opt" in
+        i) InpFil="$OPTARG";;
+        r) RefFil="$OPTARG";; 
+        l) LogFil="$OPTARG";;
+        B) BadET="true";;
+        H) echo "$usage"; exit;;
+    esac
 done
 
-#load RefFil file
+#check all required paramaters present
+if [[ ! -e "$InpFil" ]] || [[ ! -e "$RefFil" ]]; then echo "Missing/Incorrect required arguments"; echo "$usage"; exit; fi
+
+#Call the RefFil to load variables
 RefFil=`readlink -f $RefFil`
 source $RefFil 
 
 #Load script library
-source $EXOMPPLN/exome.lib.sh
-
-#check all required paramaters present
-if [[ ! -e "$InpFil" ]] || [[ ! -e "$RefFil" ]]; then echo "Missing required arguments"; echo "$usage"; exit; fi
+source $EXOMPPLN/exome.lib.sh #library functions begin "func"
 
 #set local variables
 VcfFil=`readlink -f $InpFil` #resolve absolute path to Vcf
@@ -80,7 +81,7 @@ StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -D $DBSNP
   $infofields
  -log $GatkLog" #command to be run
-funcGatkAddArguments
+funcGatkAddArguments # Adds additional parameters to the GATK command depending on flags (e.g. -B or -F)
 funcRunStep
 
 #End Log

@@ -1,15 +1,16 @@
 #!/bin/bash
 #$ -cwd -l mem=10G,time=6:: -N GenBQSR
 
-#This script takes a bam file or a list of bam files  and generates the base quality score recalibration table using GATK
-#	InpFil - (required) - Path to Bam file or a list of BamFiles to be recalibrated, if a list filename must end ".list"
-#	RefFiles - (required) - shell file to export variables with locations of reference files, jar files, and resource directories; see list below
-#	TgtBed - (required) - Exome capture kit targets bed file (must end .bed for GATK compatability)
-#	LogFil - (optional) - File for logging progress
-#	Flag - A - AllowMisencoded - see GATK manual, causes GATK to ignore abnormally high quality scores that would otherwise indicate that the quality score encoding was incorrect
-#	Flag - P - PipeLine - call the next step in the pipeline at the end of the job
-#	Flag - B - BadET - prevent GATK from phoning home
-#	Help - H - (flag) - get usage information
+# This script takes a bam file or a list of bam files (for  where the bam has been split into chromosomes for realigning) and generates the base quality score recalibration table using GATK
+# If the script is passed a list of bam files a single recalibration table is made covering all 24 chromosomes, this is then passed to the next script which is called as an array to apply the recalibration on each bam separately
+#    InpFil - (required) - Path to Bam file or a list of BamFiles to be recalibrated, if a list filename must end ".list"
+#    RefFil - (required) - shell file containing variables with locations of reference files, jar files, and resource directories; see list below for required variables
+#    TgtBed - (required) - Exome capture kit targets bed file (must end .bed for GATK compatability) ; may be specified using a code corresponding to a variable in the RefFil giving the path to the target file
+#    LogFil - (optional) - File for logging progress
+#    Flag - A - AllowMisencoded - see GATK manual, causes GATK to ignore abnormally high quality scores that would otherwise indicate that the quality score encoding was incorrect
+#    Flag - P - PipeLine - call the next step in the pipeline at the end of the job
+#    Flag - B - BadET - prevent GATK from phoning home
+#    Help - H - (flag) - get usage information
 
 #list of required vairables in reference file:
 # $REF - reference genome in fasta format - must have been indexed using 'bwa index ref.fa'
@@ -24,7 +25,7 @@
 # java <http://www.oracle.com/technetwork/java/javase/overview/index.html>
 # GATK <https://www.broadinstitute.org/gatk/> <https://www.broadinstitute.org/gatk/download>
 
-## This file also require exome.lib.sh - which contains various functions used throughout my Exome analysis scripts; this file should be in the same directory as this script
+## This file also requires exome.lib.sh - which contains various functions used throughout the Exome analysis scripts; this file should be in the same directory as this script
 
 ###############################################################
 
@@ -32,14 +33,14 @@
 usage="
 ExmAln.5.GenerateBQSRTable.sh -i <InputFile> -r <reference_file> -t <targetfile> -l <logfile> -PABH
 
-	 -i (required) - Path to Bam file or \".list\" file containing a multiple paths
-	 -r (required) - shell file to export variables with locations of reference files and resource directories
-	 -t (required) - Exome capture kit targets or other genomic intervals bed file (must end .bed for GATK compatability)
-	 -l (optional) - Log file
-	 -P (flag) - Call next step of exome analysis pipeline after completion of script
-	 -A (flag) - AllowMisencoded - see GATK manual
-	 -B (flag) - Prevent GATK from phoning home
-	 -H (flag) - echo this message and exit
+     -i (required) - Path to Bam file or \".list\" file containing a multiple paths
+     -r (required) - shell file containing variables with locations of reference files and resource directories
+     -t (required) - Exome capture kit targets or other genomic intervals bed file (must end .bed for GATK compatability)
+     -l (optional) - Log file
+     -P (flag) - Call next step of exome analysis pipeline after completion of script
+     -A (flag) - AllowMisencoded - see GATK manual
+     -B (flag) - Prevent GATK from phoning home
+     -H (flag) - echo this message and exit
 "
 
 AllowMisencoded="false"
@@ -48,28 +49,31 @@ BadET="false"
 
 #get arguments
 while getopts i:r:t:l:PABH opt; do
-	case "$opt" in
-		i) InpFil="$OPTARG";;
-		r) RefFil="$OPTARG";; 
-		t) TgtBed="$OPTARG";; 
-		l) LogFil="$OPTARG";;
-		P) PipeLine="true";;
-		A) AllowMisencoded="true";;
-		B) BadET="true";;
-		H) echo "$usage"; exit;;
-	esac
+    case "$opt" in
+        i) InpFil="$OPTARG";;
+        r) RefFil="$OPTARG";; 
+        t) TgtBed="$OPTARG";; 
+        l) LogFil="$OPTARG";;
+        P) PipeLine="true";;
+        A) AllowMisencoded="true";;
+        B) BadET="true";;
+        H) echo "$usage"; exit;;
+    esac
 done
 
-#load settings file
+#check all required paramaters present
+if [[ ! -e "$InpFil" ]] || [[ ! -e "$RefFil" ]] || [[ ! -e "$TgtBed" ]]; then echo "Missing/Incorrect required arguments"; echo "$usage"; exit; fi
+
+#Call the RefFil to load variables
 RefFil=`readlink -f $RefFil`
 source $RefFil
 
 #Load script library
-source $EXOMPPLN/exome.lib.sh #library functions begin "func"
+source $EXOMPPLN/exome.lib.sh #library functions begin "func" #library functions begin "func"
 
 #Set Local Variables
 ArrNum=$SGE_TASK_ID
-funcGetTargetFile
+funcGetTargetFile #If the target file has been specified using a code, get the full path from the exported variable
 BamFil=`readlink -f $InpFil` #resolve absolute path to bam
 BamNam=`basename $BamFil | sed s/.bam// | sed s/.list//` #a name to use for the various files
 if [[ -z "$LogFil" ]];then LogFil=$BamNam.GenBQSR.log; fi # a name for the log file
@@ -96,11 +100,11 @@ StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -o $RclTable 
  --filter_mismatching_base_and_quals
  -log $GatkLog" #command to be run
-funcGatkAddArguments
+funcGatkAddArguments # Adds additional parameters to the GATK command depending on flags (e.g. -B or -F)
 funcRunStep
 
 
-#Call next step; if original file was a list of bams then need to call as an array job
+#Call next step in pipeline if requested; if the original file was a list of bams then need to call as an array job
 ChecList=${InpFil##*.}
 if [[ "$ChecList" == "list" ]];then
    echo $ChecList

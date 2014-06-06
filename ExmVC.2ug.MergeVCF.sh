@@ -2,7 +2,7 @@
 #$ -cwd -l mem=4G,time=2:: -N MergeVCF
 
 #This script concatenates multiple vcfs into a single vcf, for example vcfs that have been split by chromosome. 
-#    InpFil - (required) - A driectory containging vcf files to be concatenated - they should all contain the same samples 
+#    VcfDir - (required) - A driectory containging vcf files to be concatenated - they should all contain the same samples 
 #    RefFil - (required) - shell file containing variables with locations of reference files, jar files, and resource directories; see list below for required variables
 #    LogFil - (optional) - File for logging progress
 #    Flag - P - PipeLine - call the next step in the pipeline at the end of the job
@@ -48,7 +48,7 @@ while getopts i:r:l:PBH opt; do
 done
 
 #check all required paramaters present
-if [[ ! -e "$InpFil" ]] || [[ ! -e "$RefFil" ]]; then echo "Missing/Incorrect required arguments"; echo "$usage"; exit; fi
+if [[ ! -e "$VcfDir" ]] || [[ ! -e "$RefFil" ]]; then echo "Missing/Incorrect required arguments"; echo "$usage"; exit; fi
 
 #Call the RefFil to load variables
 RefFil=`readlink -f $RefFil`

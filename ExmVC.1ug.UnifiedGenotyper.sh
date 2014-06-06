@@ -58,7 +58,7 @@ while getopts i:r:l:t:PBH opt; do
 done
 
 #check all required paramaters present
-if [[ ! -e "$InpFil" ]] || [[ ! -e "$RefFil" ]] || [[ ! -e "$TgtBed" ]]; then echo "Missing/Incorrect required arguments"; echo "$usage"; exit; fi
+if [[ ! -e "$InpFil" ]] || [[ ! -e "$RefFil" ]] || [[ -z "$TgtBed" ]]; then echo "Missing/Incorrect required arguments"; echo "$usage"; exit; fi
 
 #Call the RefFil to load variables
 RefFil=`readlink -f $RefFil`
@@ -68,8 +68,8 @@ source $RefFil
 source $EXOMPPLN/exome.lib.sh #library functions begin "func" #library functions begin "func"
 
 #Set local Variables
-funcGetTargetFile #If the target file has been specified using a code, get the full path from the exported variable
-# The target file needs to be divided evenly between all the jobs. i.e. if the target file is 1000 lines long and there are 40 jobs, each job should have 25 lines of the target file
+
+funcGetTargetFile #If the target file has been specified using a code, get the full path from the exported variable# The target file needs to be divided evenly between all the jobs. i.e. if the target file is 1000 lines long and there are 40 jobs, each job should have 25 lines of the target file
 # bash arithmetic division actually gives the quotient, so if there are 1010 lines and 40 jobs the division would still give 25 lines per a job and the last 10 lines would be lost
 # to compensate for this we will find the remainder (RemTar) and then add an extra line to the first $RemTar jobs
 ArrNum=$SGE_TASK_ID

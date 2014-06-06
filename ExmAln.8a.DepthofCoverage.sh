@@ -55,7 +55,7 @@ while getopts i:r:t:l:ABH opt; do
 done
 
 #check all required paramaters present
-if [[ ! -e "$InpFil" ]] || [[ ! -e "$RefFil" ]] || [[ ! -e "$TgtBed" ]]; then echo "Missing/Incorrect required arguments"; echo "$usage"; exit; fi
+if [[ ! -e "$InpFil" ]] || [[ ! -e "$RefFil" ]] || [[ -z "$TgtBed" ]]; then echo "Missing/Incorrect required arguments"; echo "$usage"; exit; fi
 
 #Call the RefFil to load variables
 RefFil=`readlink -f $RefFil`

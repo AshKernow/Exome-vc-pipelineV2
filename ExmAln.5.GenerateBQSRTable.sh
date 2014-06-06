@@ -62,7 +62,7 @@ while getopts i:r:t:l:PABH opt; do
 done
 
 #check all required paramaters present
-if [[ ! -e "$InpFil" ]] || [[ ! -e "$RefFil" ]] || [[ ! -e "$TgtBed" ]]; then echo "Missing/Incorrect required arguments"; echo "$usage"; exit; fi
+if [[ ! -e "$InpFil" ]] || [[ ! -e "$RefFil" ]] || [[ -z "$TgtBed" ]]; then echo "Missing/Incorrect required arguments"; echo "$usage"; exit; fi
 
 #Call the RefFil to load variables
 RefFil=`readlink -f $RefFil`
@@ -72,8 +72,8 @@ source $RefFil
 source $EXOMPPLN/exome.lib.sh #library functions begin "func" #library functions begin "func"
 
 #Set Local Variables
-ArrNum=$SGE_TASK_ID
 funcGetTargetFile #If the target file has been specified using a code, get the full path from the exported variable
+ArrNum=$SGE_TASK_ID
 BamFil=`readlink -f $InpFil` #resolve absolute path to bam
 BamNam=`basename $BamFil | sed s/.bam// | sed s/.list//` #a name to use for the various files
 if [[ -z "$LogFil" ]];then LogFil=$BamNam.GenBQSR.log; fi # a name for the log file

@@ -1,1 +1,62 @@
-New exome pipeline using GATK v3.0. Based on the GATK 2.8 pipeline.
+Exome processing scripts using GATK v3.0. 
+Based on the GATK 2.x pipeline from Badri Vardarajan and GATK 1.7 pipeline from Samreen Zafer
+
+General Notes:
+The scripts in comprise two pipelines and a group of ad hoc manipulations. There are also a number of auxilliary files.
+Each script begins with a block of comments describing the function and use of the script. This includes a list of required tools (e.g. samtools, java etc.) that should be in the users PATH.
+With many of the scripts the input can either be a single file or, if there are multiple files for the script to be run on, a file containing a list of files. In the latter case the script should be called as an array, each instance of the array will then read the appropriate line of the list to get its input file.
+
+Auxilliary files
+There are two auxillary files necessary for most of the scripts. 
+The first auxillary file is a reference file containing a list of variables that can be exported to the local environment. It is provided by the "-r" argument in for each script and fed to the RefFil variable in each script. It provides links to the necessary reference materials and to the necessary jar files for GATK and Picard. This makes it simpler to change locales of these files without having to rewrite every script. The comments for each script contain a list that describes the variables that it requires from the reference file. Multiple versions of this file may be maintained for e.g. using different genome builds or different versions of GATK.
+
+The second auxillary file is called "exome.lib.sh" and is a small library of functions that are used commonly by many of the scripts. Each script calls this file internally. This script should be kept in the same directory as the rest of the scripts. 
+
+Pipelines
+The two pipelines are:
+    ExmAln - Alignment with BWA mem, local indel realignment with GATK, base quality score recalibration with GATK
+    ExmVC - Variant calling with GATK, variant quality score recalibration with GATK, variant filtering with GATK, variant annotation with annovar
+    
+Both pipelines also emit various QC files and a log file. 
+The separate scripts in the each pipeline can be called independently. Each script will call the next in the pipeline if the -P flag is provided.
+Many of the scripts use an exome target intervals file. This is provided by the "-t" argument. The path to the required file can be given explicitly, alternatively, for convenience, a code can be added to the auxillary reference file with a link to the appropriate bed file, this code can then be used as the argument. e.g. instead of of giving the full path to the SureSelect_All_Exon_V2 bed file every time the following is added to the reference file:
+AgtV2="$EXOMRES/SureSelect_All_Exon_V2.b37.ordered.bed"
+and then the script is called with "-t AgtV2".
+
+Most scripts will produce a log file detailing activity. In the case of the pipelines these will all be written to single log file.
+
+Input for ExmAln.1a.Align_Fastq_to_Bam_with_BWAmem.sh
+This script takes paired end or single end fastq files and aligns them BWA mem. The input file is a table that details both the file locations and the readgroup header to be added into the BAM. The script details the format for this file. The script below, with some modifications according to the precise names of the files, will make this table when run in a directory containing the necessary fastq file:
+
+#!/bin/bash
+# this script is for generating the input table for ExmAln.1a.Align_Fastq_to_Bam_with_BWAmem.sh
+# run it in a directory containging the fastq files to be aligned
+# for use with paired end
+# you will need to modify the bash substistutions lines for identified according to the filenames of your fastq files
+# the current script run in a directory with the file below give the output at the bottom
+#   CDH84_NEW_ACTTGA_AC3WP0ACXX_L003_001.R2.fastq.gz
+#   CDH84_NEW_ACTTGA_AC3WP0ACXX_L003_001.R1.fastq.gz
+#   CDH84_NEW_ACTTGA_AC3WP0ACXX_L001_001.R2.fastq.gz
+#   CDH84_NEW_ACTTGA_AC3WP0ACXX_L001_001.R1.fastq.gz
+#   CDH84_NEW_ACTTGA_AC3WP0ACXX_L002_001.R2.fastq.gz
+#   CDH84_NEW_ACTTGA_AC3WP0ACXX_L002_001.R1.fastq.gz
+
+
+for i in $(find `pwd` | grep R1 | grep fastq); do 
+FIL=$i
+READGROUP=`basename $FIL` #gent
+READGROUP=${READGROUP%_00*}
+LIBRARY=${READGROUP%_L*}
+SAMPLEID=${LIBRARY%%_N*}
+echo $FIL >> TEMPLIST
+echo "@RG\tID:$READGROUP\tSM:$SAMPLEID\tLB:$LIBRARY\tPL:ILLUMINA\tCN:BISRColumbia" >> TEMPLIST
+echo ${FIL/R1/R2} >> TEMPLIST
+done
+cat TEMPLIST | paste - - - > Fastq_for_Align.list
+rm -rf TEMPLIST
+
+
+#Output:
+#/ifs/scratch/c2b2/ys_lab/yshen/WENDY/CDHLan/May2014TrioAnalysis/fastq/CDH84_NEW/CDH84_NEW_ACTTGA_AC3WP0ACXX_L003_001.R1.fastq.gz    @RG\tID:CDH84_NEW_ACTTGA_AC3WP0ACXX_L003\tSM:CDH84\tLB:CDH84_NEW_ACTTGA_AC3WP0ACXX\tPL:ILLUMINA\tCN:BISRColumbia    /ifs/scratch/c2b2/ys_lab/yshen/WENDY/CDHLan/May2014TrioAnalysis/fastq/CDH84_NEW/CDH84_NEW_ACTTGA_AC3WP0ACXX_L003_001.R2.fastq.gz
+#/ifs/scratch/c2b2/ys_lab/yshen/WENDY/CDHLan/May2014TrioAnalysis/fastq/CDH84_NEW/CDH84_NEW_ACTTGA_AC3WP0ACXX_L001_001.R1.fastq.gz    @RG\tID:CDH84_NEW_ACTTGA_AC3WP0ACXX_L001\tSM:CDH84\tLB:CDH84_NEW_ACTTGA_AC3WP0ACXX\tPL:ILLUMINA\tCN:BISRColumbia    /ifs/scratch/c2b2/ys_lab/yshen/WENDY/CDHLan/May2014TrioAnalysis/fastq/CDH84_NEW/CDH84_NEW_ACTTGA_AC3WP0ACXX_L001_001.R2.fastq.gz
+#/ifs/scratch/c2b2/ys_lab/yshen/WENDY/CDHLan/May2014TrioAnalysis/fastq/CDH84_NEW/CDH84_NEW_ACTTGA_AC3WP0ACXX_L002_001.R1.fastq.gz    @RG\tID:CDH84_NEW_ACTTGA_AC3WP0ACXX_L002\tSM:CDH84\tLB:CDH84_NEW_ACTTGA_AC3WP0ACXX\tPL:ILLUMINA\tCN:BISRColumbia    /ifs/scratch/c2b2/ys_lab/yshen/WENDY/CDHLan/May2014TrioAnalysis/fastq/CDH84_NEW/CDH84_NEW_ACTTGA_AC3WP0ACXX_L002_001.R2.fastq.gz

@@ -70,8 +70,11 @@ source $EXOMPPLN/exome.lib.sh #library functions begin "func" #library functions
 #Set local Variables
 funcGetTargetFile #If the target file has been specified using a code, get the full path from the exported variable
 if [[ "$ArrNum" != "undefined" ]]; then 
-    InpNam=`basename ${InpNam/.list/}`
+    InpNam=`basename InpFil`
+    InpNam=${InpNam%%.*}
     VcfLst=HCgVCF.$InpNam.list #File listing paths to gVCF
+    if [[ -z $LogFil ]]; then LogFil=$InpNam.HCgVCF.log; fi # a name for the log file
+    if [[ "$PipeLine" == "true" ]]; then awk '{ gsub(/.*\//, ""); gsub(/.bam$/, ".g.vcf"); print }' $InpFil > $VcfLst; fi #make a list of the output gVCF files for passing to next step of pipeline
 fi
 ArrNum=$SGE_TASK_ID
 funcFilfromList #if the input is a list get the appropriate input file for this job of the array --> $InpFil
@@ -113,9 +116,12 @@ funcGatkAddArguments # Adds additional parameters to the GATK command depending 
 funcRunStep
 
 #Call next step
-#NextJob="Get basic bam metrics"
-#QsubCmd="qsub -hold_jid $JOB_ID -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.3a.Bam_metrics.sh -i $RclLst -r $RefFil -l $LogFil -Q"
-#funcPipeLine
-
+if [[ "$ArrNum" -eq 1 ]]; then
+    mkdir -p stdostde
+    NextJob="Genotype gVCFs"
+    QsubCmd="qsub -hold_jid $JOB_ID -o stdostde/ -e stdostde/ $EXOMPPLN/ExmVC.2.GenotypeGVCFs.sh -i $VcfLst -r $RefFil -t $TgtBed -l $LogFil -P"
+    if [[ "$BadET" == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
+    funcPipeLine
+fi
 #End Log
 funcWriteEndLog

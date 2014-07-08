@@ -26,7 +26,7 @@
 usage="
 ExmAdHoc.3.GATKAnnotateVCF.sh -i <InputFile> -r <reference_file> -t <target intervals file> -l <logfile> -H
 
-     -i (required) - Path \".list\" file containing a multiple paths to bams. Name of input file used as name of output.
+     -i (required) - A vcf file to be annotated
      -r (required) - shell file containing variables with locations of reference files and resource directories
      -l (optional) - Log file
      -B (flag) - Prevent GATK from phoning home

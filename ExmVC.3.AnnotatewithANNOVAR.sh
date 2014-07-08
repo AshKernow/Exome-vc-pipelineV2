@@ -15,6 +15,7 @@
 
 #list of required tools:
 # annovar <http://www.openbioinformatics.org/annovar/> <http://www.openbioinformatics.org/annovar/annovar_download_form.php>
+# N.B. : The perl script "table_annovar_cadd.pl", which is used below, is a modified version of the table_annovar.pl script that was released independent of the main bundle on 24th February 2014 (see annovar homepage).  This has added lines to allow for the inclusion of the phred-scaled cadd score from the cadd or caddgt10 annovar databases. In the normal perl script only the raw cadd scores are added to the annotation.
 
 ## This file also requires exome.lib.sh - which contains various functions used throughout the Exome analysis scripts; this file should be in the same directory as this script
 
@@ -78,7 +79,7 @@ funcRunStep
 
 ##Generate Annotation table
 StepNam="Build Annotation table using ANNOVAR"
-StepCmd="table_annovar23.pl $TmpVar $ANNHDB --buildver hg19 --remove -protocol refGene,esp6500si_all,esp6500si_aa,esp6500si_ea,1000g2012apr_all,1000g2012apr_eur,1000g2012apr_amr,1000g2012apr_asn,1000g2012apr_afr,ljb23_all,caddgt10 -operation g,f,f,f,f,f,f,f,f,f,f -otherinfo  -nastring \"\"  --outfile $AnnFil"
+StepCmd="table_annovar_cadd.pl $TmpVar $ANNHDB --buildver hg19 --remove -protocol refGene,esp6500si_all,esp6500si_aa,esp6500si_ea,1000g2012apr_all,1000g2012apr_eur,1000g2012apr_amr,1000g2012apr_asn,1000g2012apr_afr,ljb23_all,cadd -operation g,f,f,f,f,f,f,f,f,f,f -otherinfo  -nastring \"\"  --outfile $AnnFil"
 funcRunStep
 AnnFil=$AnnFil.hg19_multianno.txt
 
@@ -94,7 +95,7 @@ tabix  -s 1 -b 2 -e 3 $AnnFil.gz
 #Annotate with vcftools
 StepNam="Annotate with vcftools"
 StepCmd="cat $InpFil | vcf-annotate -a $AnnFil.gz
- -c -,-,-,-,-,INFO/VarFunc,INFO/GeneName,INFO/VarClass,INFO/AAChange,INFO/ESPfreq,-,-,INFO/1KGfreq,-,-,-,-,INFO/SIFTscr,-,INFO/SIFTprd,-,-,INFO/PP2scr,INFO/PP2prd,-,-,-,INFO/MutTscr,-,INFO/MutTprd,-,-,-,-,-,-,-,-,-,-,-,INFO/GERP,INFO/PhyloP,INFO/SiPhy,INFO/CADD,CHROM,POS,-,REF,ALT
+ -c -,-,-,-,-,INFO/VarFunc,INFO/GeneName,INFO/VarClass,INFO/AAChange,INFO/ESPfreq,-,-,INFO/1KGfreq,-,-,-,-,INFO/SIFTscr,-,INFO/SIFTprd,-,-,INFO/PP2scr,INFO/PP2prd,-,-,-,INFO/MutTscr,-,INFO/MutTprd,-,-,-,-,-,-,-,-,-,-,-,INFO/GERP,INFO/PhyloP,INFO/SiPhy,INFO/CADD_raw,INFO/CADD_phred,CHROM,POS,-,REF,ALT
  -d key=INFO,ID=VarFunc,Number=1,Type=String,Description='Genomic region/Sequence Function'
  -d key=INFO,ID=GeneName,Number=1,Type=String,Description='refGene GeneName'
  -d key=INFO,ID=VarClass,Number=1,Type=String,Description='Mutational Class'
@@ -110,7 +111,8 @@ StepCmd="cat $InpFil | vcf-annotate -a $AnnFil.gz
  -d key=INFO,ID=GERP,Number=1,Type=Float,Description='GERP++ score'
  -d key=INFO,ID=PhyloP,Number=1,Type=Float,Description='PhyloP score'
  -d key=INFO,ID=SiPhy,Number=1,Type=Float,Description='SiPhy scores'
- -d key=INFO,ID=CADD,Number=1,Type=Float,Description='Whole-genome CADD score'
+ -d key=INFO,ID=CADD_raw,Number=1,Type=Float,Description='Whole-genome raw CADD score'
+ -d key=INFO,ID=CADD_phred,Number=1,Type=Float,Description='Whole-genome phred-scaled CADD score'
  > $VcfFil"
 funcRunStep
 

@@ -2,9 +2,11 @@
 export EXOMPPLN="/ifs/scratch/c2b2/af_lab/ads2202/Exome_Seq/scripts/Exome_pipeline_scripts_GATKv3" # Directory containing pipeline shell scripts
 export EXOMRES="/ifs/scratch/c2b2/af_lab/ads2202/Exome_Seq/resources" # Directory containing resources/references for pipeline
 
-#jar files
+#jar files  and directories for software
 GATKJAR="/ifs/scratch/c2b2/af_lab/ads2202/src/GenomeAnalysisTK_Current/GenomeAnalysisTK.jar" #Current GATK jar file
 PICARD="/ifs/scratch/c2b2/af_lab/ads2202/src/picard-tools-1.101/" #directory containing Picard jar files
+SNPEFF="/ifs/home/c2b2/af_lab/ads2202/scratch/src/snpEff/snpEff.jar" # Current snpEff jar file
+
 
 ## References
 export BUILD="b37" # shorthand for build

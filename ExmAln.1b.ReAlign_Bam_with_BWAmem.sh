@@ -106,14 +106,19 @@ echo "----------------------------------------------------------------" >> $TmpL
 #get ReadGroupHeader from input BAM
 RgHeader=$(samtools view -H $BamFil | grep -m 1 ^@RG | awk '{ gsub("\t","\\t") } { print }')
 echo "ReadGroup header: $RgHeader" >> $TmpLog
-if [[ $RgHeader == "" ]]; then #check that we have a  RG header and if not write a warning to the log file
+if [[ $RgHeader == "" ]]; then #check that we have a  RG header and if not write a warning to the log file and exit
     echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" >> $TmpLog
     echo "     Problem with ReadGroup header" >> $TmpLog
     echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" >> $TmpLog
+    cat $TmpLog >> $LogFil
+    rm $TmpLog
+    exit 1
 fi
-TestMultipleRG=$(samtools view -H $BamFil | grep ^@RG | wc -l } { print }')
-if [[ $RgHeader == "" ]]; then 
+TestMultipleRG=$(samtools view -H $BamFil | grep ^@RG | wc -l)
+if [[ $TestMultipleRG -gt 1 ]]; then 
+    echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" >> $TmpLog
     echo "There are "$TestMultipleRG" Readgroups in the bam. They will be reduced to a single readgroup with the following header:">> $TmpLog
+    echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" >> $TmpLog
     echo "     "$RgHeader >> $TmpLog
 fi
 

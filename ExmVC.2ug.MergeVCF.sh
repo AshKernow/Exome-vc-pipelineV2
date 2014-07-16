@@ -75,7 +75,7 @@ funcRunStep
 
 #Call next job
 NextJob="Annotate with Annovar"
-QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmVC.3.AnnotatewithANNOVAR.sh -i $VcfFil -r $RefFil -l $LogFil -P"
+QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmVC.3.AnnotateVCF.sh -i $VcfFil -r $RefFil -l $LogFil -P"
 funcPipeLine
 
 #End Log

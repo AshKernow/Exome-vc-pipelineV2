@@ -3,9 +3,9 @@
 #-------------------------------------------------------------------------------------------------------
 #Function to set the target file location when given a code present as a variable in the reference file
 funcGetTargetFile (){
-	if [[ "$TGTCODES" == *"$TgtBed"* ]];then
-		eval TgtBed=\$$TgtBed
-	fi
+    if [[ "$TGTCODES" == *"$TgtBed"* ]];then
+        eval TgtBed=\$$TgtBed
+    fi
 }
 #-------------------------------------------------------------------------------------------------------
 
@@ -14,8 +14,8 @@ funcGetTargetFile (){
 funcFilfromList() {
 ChecList=${InpFil##*.}
 if [[ "$ChecList" == "list" ]];then
-	echo $ChecList
-	InpFil=$(head -n $ArrNum $InpFil | tail -n 1)
+    echo $ChecList
+    InpFil=$(head -n $ArrNum $InpFil | tail -n 1)
 fi
 }
 #-------------------------------------------------------------------------------------------------------
@@ -47,10 +47,10 @@ funcLogStepStart () { echo "- Start $StepName `date`...">> $TmpLog ; }
 #-------------------------------------------------------------------------------------------------------
 #func to trim GATK output log and write it to the temp log
 funcTrimGATKlog (){
-	echo "  --- GATK output log for $StepName ----------------" >> $TmpLog
-	grep -vE "ProgressMeter - *[dc0-9XY]|Copyright|INITIALIZATION COMPLETE|----|For support and documentation|Done preparing for traversal" $GatkLog | awk '{ print "\t\t"$0 }' >> $TmpLog
-	echo "  --- --- --- --- --- --- ---" >> $TmpLog
-	rm $GatkLog
+    echo "  --- GATK output log for $StepName ----------------" >> $TmpLog
+    grep -vE "ProgressMeter - *[dc0-9XY]|Copyright|INITIALIZATION COMPLETE|----|For support and documentation|Done preparing for traversal|^WARN[[:print:]]*SnpEff" $GatkLog | awk '{ print "\t\t"$0 }' >> $TmpLog
+    echo "  --- --- --- --- --- --- ---" >> $TmpLog
+    rm $GatkLog
 }
 #-------------------------------------------------------------------------------------------------------
 
@@ -58,16 +58,16 @@ funcTrimGATKlog (){
 #function checks that the step has completed successfully, if not it writes and error message to the log and exits the script, otherwise it logs the completion of the step
 funcLogStepFinit () { 
 if [[ $? -ne 0 ]]; then #check exit status and if error then...
-	echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" >> $TmpLog
-	echo "     $StepName failed `date`" >> $TmpLog
-	qstat -j $JOB_ID | grep -E "usage *$SGE_TASK_ID:" >> $TmpLog #get cluster usage stats
-	echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" >> $TmpLog
-	echo "=================================================================" >> $TmpLog
-	funcTrimGATKlog
-	grep "ERROR MESSAGE" $SGE_STDERR_PATH | awk '{ print "\t\t"$0 }' >> $TmpLog
-	cat $TmpLog >> $LogFil
-	rm $TmpLog
-	exit 1
+    echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" >> $TmpLog
+    echo "     $StepName failed `date`" >> $TmpLog
+    qstat -j $JOB_ID | grep -E "usage *$SGE_TASK_ID:" >> $TmpLog #get cluster usage stats
+    echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" >> $TmpLog
+    echo "=================================================================" >> $TmpLog
+    funcTrimGATKlog
+    grep "ERROR MESSAGE" $SGE_STDERR_PATH | awk '{ print "\t\t"$0 }' >> $TmpLog
+    cat $TmpLog >> $LogFil
+    rm $TmpLog
+    exit 1
 fi
 if [[ "$StepCmd" == *"$GATKJAR"* ]]; then funcTrimGATKlog; fi
 echo "- End $StepName `date`...">> $TmpLog # if no error log the completion of the step
@@ -113,11 +113,11 @@ if [[ "$BadET" == "true" ]]; then StepCmd=$StepCmd" -et NO_ET -K $ETKEY"; fi
 # function for calling next step in pipeline
 funcPipeLine (){
 if [[ "$PipeLine" == "true" ]]; then
-	mkdir -p stdostde
-	echo "- Call $NextJob `date`:" >> $TmpLog
-	echo "    "$QsubCmd  >> $TmpLog
-	eval $QsubCmd >> $TmpLog
-	echo "----------------------------------------------------------------" >> $TmpLog
+    mkdir -p stdostde
+    echo "- Call $NextJob `date`:" >> $TmpLog
+    echo "    "$QsubCmd  >> $TmpLog
+    eval $QsubCmd >> $TmpLog
+    echo "----------------------------------------------------------------" >> $TmpLog
 fi
 }
 #-------------------------------------------------------------------------------------------------------

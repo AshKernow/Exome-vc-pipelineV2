@@ -1,10 +1,11 @@
 #!/bin/bash
-#$ -cwd  -l mem=12G,time=4:: -N HCgVCF
+#$ -cwd  -l mem=12G,time=8:: -N HCgVCF
 
 #This script takes a bam file or a list of bam files (filename must end ".list") and runs variant calling using the HaplotypeCaller in gVCF mode
 #    InpFil - (required) - Path to Bam file to be aligned. Alternatively a file with a list of bams can be provided and the script run as an array job. List file name must end ".list"
 #    RefFil - (required) - shell file containing variables with locations of reference files, jar files, and resource directories; see list below for required variables
 #    TgtBed - (optional) - Exome capture kit targets bed file (must end .bed for GATK compatability) ; may be specified using a code corresponding to a variable in the RefFil giving the path to the target file- only required if calling pipeline
+#    VcfNam - (optional) - A name for the analysis - to be used for naming output files. Will be derived from input filename if not provided; only used if calling pipeline
 #    LogFil - (optional) - File for logging progress
 #    Flag - P - PipeLine - call the next step in the pipeline at the end of the job
 #    Flag - B - BadET - prevent GATK from phoning home
@@ -33,6 +34,7 @@ ExmVC.1.HaplotypeCaller_GVCFmode.sh -i <InputFile> -r <reference_file> -t <targe
      -i (required) - Path to Bam file for variant calling or \".list\" file containing a multiple paths
      -r (required) - shell file containing variables with locations of reference files and resource directories
      -t (required) - Exome capture kit targets or other genomic intervals bed file (must end .bed for GATK compatability)
+     -n (optional) - Analysis/output VCF name - will be derived from input filename if not provided; only used if calling pipeline
      -l (optional) - Log file
      -P (flag) - Call next step of exome analysis pipeline after completion of script
      -B (flag) - Prevent GATK from phoning home
@@ -44,10 +46,11 @@ PipeLine="false"
 BadET="false"
 
 PipeLine="false"
-while getopts i:r:l:t:PBH opt; do
+while getopts i:r:n:l:t:PBH opt; do
     case "$opt" in
         i) InpFil="$OPTARG";;
         r) RefFil="$OPTARG";; 
+        n) VcfNam="$OPTARG";;
         l) LogFil="$OPTARG";;
         t) TgtBed="$OPTARG";; 
         P) PipeLine="true";;
@@ -70,10 +73,9 @@ source $EXOMPPLN/exome.lib.sh #library functions begin "func" #library functions
 #Set local Variables
 funcGetTargetFile #If the target file has been specified using a code, get the full path from the exported variable
 if [[ "$ArrNum" != "undefined" ]]; then 
-    InpNam=`basename InpFil`
-    InpNam=${InpNam%%.*}
-    VcfLst=HCgVCF.$InpNam.list #File listing paths to gVCF
-    if [[ -z $LogFil ]]; then LogFil=$InpNam.HCgVCF.log; fi # a name for the log file
+    if [[ -z "$VcfNam" ]];then VcfNam=`basename $InpFil`; VcfNam=${VcfNam%%.*}; fi  # a name for the output files
+    VcfLst=HCgVCF.$VcfNam.list #File listing paths to gVCF
+    if [[ -z $LogFil ]]; then LogFil=$VcfNam.HCgVCF.log; fi # a name for the log file
     if [[ "$PipeLine" == "true" ]]; then awk '{ gsub(/.*\//, ""); gsub(/.bam$/, ".g.vcf"); print }' $InpFil > $VcfLst; fi #make a list of the output gVCF files for passing to next step of pipeline
 fi
 ArrNum=$SGE_TASK_ID

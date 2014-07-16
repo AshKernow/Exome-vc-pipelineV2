@@ -6,6 +6,7 @@
 #    InpFil - (required) - A list of bams for variant calling. List file name must end ".list". 
 #    RefFil - (required) - shell file containing variables with locations of reference files, jar files, and resource directories; see list below for required variables
 #    TgtBed - (optional) - Exome capture kit targets bed file (must end .bed for GATK compatability) ; may be specified using a code corresponding to a variable in the RefFil giving the path to the target file
+#    VcfNam - (optional) - A name for the analysis - to be used for naming output files. Will be derived from input filename if not provided
 #    LogFil - (optional) - File for logging progress
 #    Flag - P - PipeLine - call the next step in the pipeline at the end of the job
 #    Flag - B - BadET - prevent GATK from phoning home
@@ -34,6 +35,7 @@ usage="-t 1-<NumberofJobs> ExmVC.1ug.UnifiedGenotyper.sh -i <InputFile> -r <refe
      -i (required) - Path to list of Bam files for variant calling
      -r (required) - shell file containing variables with locations of reference files and resource directories
      -t (required) - Exome capture kit targets or other genomic intervals bed file (must end .bed for GATK compatability)
+     -n (optional) - Analysis/output VCF name - will be derived from input filename if not provided
      -l (optional) - Log file
      -P (flag) - Call next step of exome analysis pipeline after completion of script
      -B (flag) - Prevent GATK from phoning home
@@ -45,10 +47,11 @@ PipeLine="false"
 BadET="false"
 
 PipeLine="false"
-while getopts i:r:l:t:PBH opt; do
+while getopts i:r:n:l:t:PBH opt; do
     case "$opt" in
         i) InpFil="$OPTARG";;
-        r) RefFil="$OPTARG";; 
+        r) RefFil="$OPTARG";;
+        n) VcfNam="$OPTARG";;
         l) LogFil="$OPTARG";;
         t) TgtBed="$OPTARG";; 
         P) PipeLine="true";;
@@ -94,7 +97,7 @@ done
 ###
 
 BamFil=`readlink -f $InpFil` #resolve absolute path to bam
-VcfNam=`basename $BamFil | sed s/_recalibrated// | sed s/_bams// | sed s/.bam// | sed s/.list//` #a name to use for the various files
+if [[ -z "$VcfNam" ]];then VcfNam=`basename $BamFil | sed s/_recalibrated// | sed s/_bams// | sed s/.bam// | sed s/.list//` ; fi  #analysis name to use for the various files
 if [[ -z "$LogFil" ]];then LogFil=$VcfNam.CallVC.log; fi # a name for the log file
 VcfDir=$VcfNam.splitfiles; mkdir -p $VcfDir # Directory to output slices to
 VcfFil=$VcfDir/$VcfNam.$ArrNum.raw_variants.vcf #Output File

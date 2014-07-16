@@ -5,6 +5,7 @@
 #    InpFil - (required) - List of gVCF files. List file name must end ".list"
 #    RefFil - (required) - shell file containing variables with locations of reference files, jar files, and resource directories; see list below for required variables
 #    TgtBed - (optional) - Exome capture kit targets bed file (must end .bed for GATK compatability) ; may be specified using a code corresponding to a variable in the RefFil giving the path to the target file- only required if calling pipeline
+#    VcfNam - (optional) - A name for the analysis - to be used for naming output files. Will be derived from input filename if not provided
 #    LogFil - (optional) - File for logging progress
 #    Flag - P - PipeLine - call the next step in the pipeline at the end of the job
 #    Flag - B - BadET - prevent GATK from phoning home
@@ -32,6 +33,7 @@ ExmVC.2.GenotypeGVCFs.sh -i <InputFile> -r <reference_file> -t <targetfile> -l <
      -i (required) - List of gVCF files. List file name must end \".list\"
      -r (required) - shell file containing variables with locations of reference files and resource directories
      -t (required) - Exome capture kit targets or other genomic intervals bed file (must end .bed for GATK compatability)
+     -n (optional) - Analysis/output VCF name - will be derived from input filename if not provided; only used if calling pipeline
      -l (optional) - Log file
      -P (flag) - Call next step of exome analysis pipeline after completion of script
      -B (flag) - Prevent GATK from phoning home
@@ -43,12 +45,13 @@ PipeLine="false"
 BadET="false"
 
 PipeLine="false"
-while getopts i:r:l:t:PBH opt; do
+while getopts i:r:t:l:PBH opt; do
     case "$opt" in
         i) InpFil="$OPTARG";;
-        r) RefFil="$OPTARG";; 
+        r) RefFil="$OPTARG";;
+        t) TgtBed="$OPTARG";;
+        n) VcfNam="$OPTARG";;
         l) LogFil="$OPTARG";;
-        t) TgtBed="$OPTARG";; 
         P) PipeLine="true";;
         B) BadET="true";;
         H) echo "$usage"; exit;;
@@ -68,8 +71,7 @@ source $EXOMPPLN/exome.lib.sh #library functions begin "func" #library functions
 
 #Set local Variables
 funcGetTargetFile #If the target file has been specified using a code, get the full path from the exported variable
-VcfNam=`basename $InpFil` 
-VcfNam=${VcfNam/.list/} # a name for the output files
+if [[ -z "$VcfNam" ]];then VcfNam=`basename $InpFil`; VcfNam=${VcfNam/.list/}; fi # a name for the output files
 if [[ -z $LogFil ]]; then LogFil=$VcfNam.GgVCF.log; fi # a name for the log file
 VcfFil=$VcfNam.vcf #Output File
 VcfAnnFil=$VcfNam.ann.vcf
@@ -112,7 +114,7 @@ mv -f $VcfAnnFil $VcfFil
 
 #Call next job
 NextJob="Annotate with Annovar"
-QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmVC.3.AnnotatewithANNOVAR.sh -i $VcfFil -r $RefFil -l $LogFil -P"
+QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmVC.3.AnnotateVCF.sh -i $VcfFil -r $RefFil -l $LogFil -P"
 funcPipeLine
 
 #End Log

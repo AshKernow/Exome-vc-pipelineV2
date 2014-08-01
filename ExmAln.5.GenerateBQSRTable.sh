@@ -1,9 +1,9 @@
 #!/bin/bash
 #$ -cwd -l mem=10G,time=6:: -N GenBQSR
 
-# This script takes a bam file or a list of bam files (for  where the bam has been split into chromosomes for realigning) and generates the base quality score recalibration table using GATK
+# This script takes a bam file and generates the base quality score recalibration table using GATK
 # If the script is passed a list of bam files a single recalibration table is made covering all 24 chromosomes, this is then passed to the next script which is called as an array to apply the recalibration on each bam separately
-#    InpFil - (required) - Path to Bam file or a list of BamFiles to be recalibrated, if a list filename must end ".list"
+#    InpFil - (required) - Path to Bam file
 #    RefFil - (required) - shell file containing variables with locations of reference files, jar files, and resource directories; see list below for required variables
 #    TgtBed - (required) - Exome capture kit targets bed file (must end .bed for GATK compatability) ; may be specified using a code corresponding to a variable in the RefFil giving the path to the target file
 #    LogFil - (optional) - File for logging progress
@@ -33,7 +33,7 @@
 usage="
 ExmAln.5.GenerateBQSRTable.sh -i <InputFile> -r <reference_file> -t <targetfile> -l <logfile> -PABH
 
-     -i (required) - Path to Bam file or \".list\" file containing a multiple paths
+     -i (required) - Path to Bam file
      -r (required) - shell file containing variables with locations of reference files and resource directories
      -t (required) - Exome capture kit targets or other genomic intervals bed file (must end .bed for GATK compatability)
      -l (optional) - Log file
@@ -73,9 +73,8 @@ source $EXOMPPLN/exome.lib.sh #library functions begin "func" #library functions
 
 #Set Local Variables
 funcGetTargetFile #If the target file has been specified using a code, get the full path from the exported variable
-ArrNum=$SGE_TASK_ID
 BamFil=`readlink -f $InpFil` #resolve absolute path to bam
-BamNam=`basename $BamFil | sed s/.bam// | sed s/.list//` #a name to use for the various files
+BamNam=`basename $BamFil | sed s/.bam//` #a name to use for the various files
 if [[ -z "$LogFil" ]];then LogFil=$BamNam.GenBQSR.log; fi # a name for the log file
 RclTable=$BamNam.recal.table # output - base quality score recalibration table
 GatkLog=$BamNam.gatklog #a log for GATK to output to, this is then trimmed and added to the script log
@@ -104,23 +103,13 @@ funcGatkAddArguments # Adds additional parameters to the GATK command depending 
 funcRunStep
 
 
-#Call next step in pipeline if requested; if the original file was a list of bams then need to call as an array job
-ChecList=${InpFil##*.}
-if [[ "$ChecList" == "list" ]];then
-   echo $ChecList
-   nJobs=$(cat $BamFil | wc -l)
-   NextJob="Apply Base Quality Score Recalibration"
-   QsubCmd="qsub -t 1-$nJobs -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.6.ApplyRecalibration.sh -i $BamFil -x $RclTable -r $RefFil -t $TgtBed -l $LogFil -P -K"
-   if [[ "$AllowMisencoded" == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
-   if [[ "$BadET" == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
-   funcPipeLine
-else
-    NextJob="Apply Base Quality Score Recalibration"
-    QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.6.ApplyRecalibration.sh -i $BamFil -x $RclTable -r $RefFil -t $TgtBed -l $LogFil -P -K"
-    if [[ "$AllowMisencoded" == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
-    if [[ "$BadET" == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
-    funcPipeLine
-fi
+#Call next step in pipeline if requested
+NextJob="Apply Base Quality Score Recalibration"
+QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.6.ApplyRecalibration.sh -i $BamFil -x $RclTable -r $RefFil -t $TgtBed -l $LogFil -P -K"
+if [[ "$AllowMisencoded" == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
+if [[ "$BadET" == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
+funcPipeLine
+
 
 #End Log
 funcWriteEndLog

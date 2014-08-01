@@ -66,6 +66,7 @@ source $EXOMPPLN/exome.lib.sh #library functions begin "func" #library functions
 
 #Set Local Variables
 ArrNum=$SGE_TASK_ID
+funcGetTargetFile #If the target file has been specified using a code, get the full path from the exported variable
 funcFilfromList #if the input is a list get the appropriate input file for this job of the array --> $InpFil
 BamFil=`readlink -f $InpFil` #resolve absolute path to bam
 BamNam=`basename $BamFil | sed s/.bam//` #a name to use for the various files
@@ -89,4 +90,4 @@ funcRunStep
 funcWriteEndLog
 
 #CleanUp
-rm -rf *DoC
+rm -rf $BamNam.DoC

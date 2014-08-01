@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -cwd  -l mem=12G,time=8:: -N HCgVCF
+#$ -cwd  -l mem=12G,time=10:: -N HCgVCF
 
 #This script takes a bam file or a list of bam files (filename must end ".list") and runs variant calling using the HaplotypeCaller in gVCF mode
 #    InpFil - (required) - Path to Bam file to be aligned. Alternatively a file with a list of bams can be provided and the script run as an array job. List file name must end ".list"

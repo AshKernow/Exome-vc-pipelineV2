@@ -117,9 +117,12 @@ fi
 TestMultipleRG=$(samtools view -H $BamFil | grep ^@RG | wc -l)
 if [[ $TestMultipleRG -gt 1 ]]; then 
     echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" >> $TmpLog
-    echo "There are "$TestMultipleRG" Readgroups in the bam. They will be reduced to a single readgroup with the following header:">> $TmpLog
-    echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" >> $TmpLog
+    echo "There are "$TestMultipleRG" Readgroups in the bam:" >> $TmpLog
+    samtools view -H $BamFil | grep ^@RG >> $TmpLog
+    echo >> $TmpLog
+    echo "They will be reduced to a single readgroup with the following header:">> $TmpLog
     echo "     "$RgHeader >> $TmpLog
+    echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" >> $TmpLog
 fi
 
 ###Align using BWA mem algorithm

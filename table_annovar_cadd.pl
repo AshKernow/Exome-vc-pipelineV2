@@ -1,10 +1,8 @@
 #!/usr/bin/env perl
 
-# This is a modified version of the table_annovar.pl script that was released independent of the main bundle on 24th February 2014 (see http://www.openbioinformatics.org/annovar/ ). 
-# There are added lines to allow for the inclusion of the phred-scaled cadd score from the cadd or caddgt10 annovar databases. In the normal perl script only the raw cadd scores are added to the annotation. 
-# The added lines all contain the word "cadd" or "CADD" 
-# This was based on the original script from 
-
+# This is a modified version of the table_annovar.pl script that was released independent of the main bundle on 24th February 2014 (see http://www.openbioinformatics.org/annovar/ ).
+# There are added lines to allow for the inclusion of the phred-scaled cadd score from the cadd or caddgt10 annovar databases. In the normal perl script only the raw cadd scores are added to the annotation
+# The added lines all contain the word "cadd" or "CADD"
 
 use warnings;
 use strict;

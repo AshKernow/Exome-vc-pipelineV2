@@ -4,7 +4,7 @@ Based on the GATK 2.x pipeline from Badri Vardarajan and GATK 1.7 pipeline from 
 ####
 General Notes
 ####
-The scripts in comprise two pipelines and a group of ad hoc manipulations. There are also two auxilliary files that are required by some of the scripts.
+The scripts comprise two pipelines and a group of ad hoc manipulations. There are also two auxilliary files that are required by some of the scripts.
 Each script begins with a block of comments describing the function and use of the script. This includes a list of required tools (e.g. samtools, java etc.) that should be in the users PATH.
 With many of the scripts the input can either be a single file or, if there are multiple files for the script to be run on, a file containing a list of files. In the latter case the script should be called as an array, each instance of the array will then read the appropriate line of the list to get its input file.
 

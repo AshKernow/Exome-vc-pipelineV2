@@ -45,7 +45,7 @@ PipeLine="false"
 BadET="false"
 
 PipeLine="false"
-while getopts i:r:t:l:PBH opt; do
+while getopts i:r:t:n:l:PBH opt; do
     case "$opt" in
         i) InpFil="$OPTARG";;
         r) RefFil="$OPTARG";;
@@ -93,6 +93,7 @@ StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -V $InpFil
  -o $VcfFil
  -D $DBSNP
+  $infofields
  -log $GatkLog" #command to be run
 funcGatkAddArguments # Adds additional parameters to the GATK command depending on flags (e.g. -B or -F)
 funcRunStep

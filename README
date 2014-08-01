@@ -17,6 +17,26 @@ The first auxillary file is the Reference File containing a list of variables th
 The second auxillary file is called "exome.lib.sh" and is a small library of functions that are used commonly by many of the scripts. Each script calls this file internally. This script should be kept in the same directory as the rest of the scripts. 
 
 ####
+Some notes about the structure of the scripts
+####
+
+The scripts begin with a header that describes the function an use of the script.
+The input options are then read and checked for the presence of all required options - exit if anything is missing.
+The scripts then load the two auxillary files (if necessary).
+Various local variables are set prior to main body of the script
+
+The main body of the script, in most cases,broken down into a series of steps. Each step has a name and a command, e.g.:
+
+    #get index stats
+    StepName="Output idx stats using Samtools"
+    StepCmd="samtools idxstats $DdpFil > $IdxStat"
+
+The function "funcRunStep" (located in the exome.lib.sh file) is then called. This functions writes the full command to the log file along with the time. Then the commnad is run. The function checks the exit code once the command has been executed and if it is other than 0 the function writes an error message to the log and exits the script.
+
+If the script is part of a pipeline then the next script in the pipeline will be called if it was requested with the -P flag (see below).
+Finally the script will write log information and clean up any temporary files or directories.
+
+####
 Pipelines
 ####
 The two pipelines are:
@@ -25,6 +45,7 @@ The two pipelines are:
     
 Both pipelines also emit various QC files and a log file. 
 Each script will call the next in the pipeline if the -P flag is provided. The separate scripts in the each pipeline can be called independently.
+Note that the pipelines will remove all intermediate bam files.
 
 ####
 #Passing Target Interval File locations to scripts

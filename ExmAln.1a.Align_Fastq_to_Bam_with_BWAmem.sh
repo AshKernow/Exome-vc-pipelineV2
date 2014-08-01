@@ -37,10 +37,10 @@
 
 #set default arguments
 usage="
-ExmAln.1a.Align_Fastq_to_Bam_with_BWAmem.sh -i <InputFile> -r <reference_file> -t <target intervals file> -l <logfile> -PH
+-t 1-{number of fastq files] ExmAln.1a.Align_Fastq_to_Bam_with_BWAmem.sh -i <InputFile> -r <reference_file> -t <target intervals file> -l <logfile> -PH
 
      -i (required) - Table containing the path to the fastq file and the RG read header
-     -r (required) - shell file containing variables with locations of reference files and resource directories
+     -r (required) - shell file containing variables with locations of reference files and resource directories (WES_Pipeline_References.b37.sh)
      -l (optional) - Log file
      -t (optional) - Exome capture kit targets or other genomic intervals bed file (must end .bed for GATK compatability); this file is required if calling the pipeline but otherwise can be omitted
      -P (flag) - Initiate exome analysis pipeline after completion of script

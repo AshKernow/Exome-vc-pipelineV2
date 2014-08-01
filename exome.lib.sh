@@ -123,7 +123,7 @@ fi
 #-------------------------------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------------------------------
 #hpc workarounds
-if [[ /bin/hostname==*.hpc ]]; then 
+if [[ /bin/hostname==*hpc* ]]; then 
 source /etc/profile.d/sge.sh  # SGE commands from within node
 source /ifs/home/c2b2/af_lab/ads2202/.bash_profile
 fi

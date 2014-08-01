@@ -85,7 +85,6 @@ FlgStat=${RclFil/bam/flagstat} # file to output samtools flagstats on the final 
 GatkLog=$BamNam.AppBQSR.gatklog #a log for GATK to output to, this is then trimmed and added to the script log
 TmpLog=$BamNam.AppBQSR.temp.log #temporary log file
 TmpDir=$BamNam.AppBQSR.tempdir; mkdir -p $TmpDir #temporary directory
-TmpTar=TmpTarFil.$Chr.bed #temporary target file
 
 #Start Log
 ProcessName="Recalibrate Base Quality Scores with GATK" # Description of the script - used in log
@@ -127,4 +126,5 @@ funcPipeLine
 funcWriteEndLog
 
 #Clean up
+if [[ -e $RclFil ]]; then rm $RclTab; fi
 if [[ -e $RclFil ]] && [[ "$KillFile" == "true" ]]; then rm $BamFil ${BamFil/bam/bai}; fi

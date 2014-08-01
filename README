@@ -24,6 +24,11 @@ The two pipelines are:
     ExmVC - Variant calling with GATK, variant quality score recalibration with GATK, variant filtering with GATK, variant annotation with annovar
     
 Both pipelines also emit various QC files and a log file. 
+
+####
+#Passing Target Interval File locations to scripts
+####
+
 The separate scripts in the each pipeline can be called independently. Each script will call the next in the pipeline if the -P flag is provided.
 Many of the scripts use an exome target intervals file. This is provided by the "-t" argument. The path to the required file can be given explicitly, alternatively, for convenience, a code can be added to the auxillary Reference File with a link to the appropriate bed file, this code can then be used as the argument. 
     e.g. instead of having to give the full path to the SureSelect_All_Exon_V2 bed file:

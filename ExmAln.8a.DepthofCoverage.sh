@@ -7,7 +7,6 @@
 #    RefFil - (required) - shell file containing variables with locations of reference files, jar files, and resource directories; see list below for required variables
 #    TgtBed - (required) - Exome capture kit targets bed file (must end .bed for GATK compatability)
 #    LogFil - (optional) - File for logging progress
-#    Flag - A - AllowMisencoded - see GATK manual, causes GATK to ignore abnormally high quality scores that would otherwise indicate that the quality score encoding was incorrect
 #    Flag - B - BadET - prevent GATK from phoning home
 #    Help - H - (flag) - get usage information
 
@@ -27,28 +26,25 @@
 
 #set default arguments
 usage="
-ExmAln.8a.DepthofCoverage.sh -i <InputFile> -r <reference_file> -t <targetfile> -l <logfile> -GIQH
+ (-t <X>-<Y> [if providing a list]) ExmAln.8a.DepthofCoverage.sh -i <InputFile> -r <reference_file> -t <targetfile> -l <logfile> -GIQH
 
      -i (required) - Path to Bam file or \".list\" file containing a multiple paths
      -r (required) - shell file containing variables with locations of reference files and resource directories
      -t (required) - Exome capture kit targets bed file (must end .bed for GATK compatability)
      -l (optional) - Log file
-     -A (flag) - AllowMisencoded - see GATK manual
      -B (flag) - Prevent GATK from phoning home
      -H (flag) - echo this message and exit
 "
 
-AllowMisencoded="false"
 BadEt="false"
 
 #get arguments
-while getopts i:r:t:l:ABH opt; do
+while getopts i:r:t:l:BH opt; do
     case "$opt" in
         i) InpFil="$OPTARG";;
         r) RefFil="$OPTARG";; 
         t) TgtBed="$OPTARG";; 
         l) LogFil="$OPTARG";;
-        A) AllowMisencoded="true";;
         B) BadET="true";;
         H) echo "$usage"; exit;;
     esac
@@ -82,7 +78,18 @@ funcWriteStartLog
 
 #Calculate depth of coverage statistics
 StepName="Calculate depth of coverage statistics using GATK DepthOfCoverage" # Description of this step - used in log
-StepCmd="java -Xmx5G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR -T DepthOfCoverage -R $REF -I $BamFil -L $TgtBed -o $OutFil -ct 1  -ct 5 -ct 10 -ct 15 -ct 20 -omitIntervals -log $GatkLog" #command to be run
+StepCmd="java -Xmx5G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
+ -T DepthOfCoverage
+ -R $REF
+ -I $BamFil
+ -L $TgtBed
+ -o $OutFil
+ -ct 1 
+ -ct 5
+ -ct 10
+ -ct 15
+ -ct 20
+ -log $GatkLog" #command to be run
 funcGatkAddArguments # Adds additional parameters to the GATK command depending on flags (e.g. -B or -F)
 funcRunStep
 
@@ -90,4 +97,4 @@ funcRunStep
 funcWriteEndLog
 
 #CleanUp
-rm -rf $BamNam.DoC
+#rm -rf $BamNam.DoC

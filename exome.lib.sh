@@ -35,6 +35,7 @@ if [[ -n "$VcfFil" ]]; then echo " Vcf File: "$VcfFil >> $TmpLog; fi
 if [[ -n "$VcfNam" ]]; then echo " Base name for outputs: $VcfNam" >> $TmpLog; fi
 if [[ -n "$Chr" ]]; then echo " Chromosome: "$Chr >> $TmpLog; fi
 if [[ -n "$TgtBed" ]]; then echo " Target Intervals File: "$TgtBed >> $TmpLog; fi
+if [[ -n "$RefFil" ]]; then echo " Pipeline Reference File: "$RefFil >> $TmpLog; fi
 echo "----------------------------------------------------------------" >> $TmpLog
 }
 #-------------------------------------------------------------------------------------------------------
@@ -48,7 +49,7 @@ funcLogStepStart () { echo "- Start $StepName `date`...">> $TmpLog ; }
 #func to trim GATK output log and write it to the temp log
 funcTrimGATKlog (){
     echo "  --- GATK output log for $StepName ----------------" >> $TmpLog
-    grep -vE "ProgressMeter - *[dc0-9XY]|Copyright|INITIALIZATION COMPLETE|----|For support and documentation|Done preparing for traversal|^WARN[[:print:]]*SnpEff" $GatkLog | awk '{ print "\t\t"$0 }' >> $TmpLog
+    grep -vE "ProgressMeter - *[dc0-9XY]|Copyright|INITIALIZATION COMPLETE|----|For support and documentation|Done preparing for traversal|^WARN[[:print:]]*SnpEff|ReadShardBalancer|this tool is currently set to genotype at most 6 alternate alleles in a given context" $GatkLog | awk '{ print "\t\t"$0 }' >> $TmpLog
     echo "  --- --- --- --- --- --- ---" >> $TmpLog
     rm $GatkLog
 }

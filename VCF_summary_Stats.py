@@ -22,6 +22,8 @@ MutFrameshift=['frameshiftinsertion', 'frameshiftdeletion']
 CodingCodes=['splicing', 'exonic', 'exonic;splicing']
 CodingTypes=['Coding variants', 'Non-coding Variants', 'All variants']
 
+print "Running VCF stats..."
+
 for WhichCode in CodingTypes:
     print WhichCode
     VCF=open(options.VCFfile,'r')

@@ -72,7 +72,8 @@ source $EXOMPPLN/exome.lib.sh #library functions begin "func" #library functions
 
 #Set local Variables
 
-funcGetTargetFile #If the target file has been specified using a code, get the full path from the exported variable# The target file needs to be divided evenly between all the jobs. i.e. if the target file is 1000 lines long and there are 40 jobs, each job should have 25 lines of the target file
+funcGetTargetFile #If the target file has been specified using a code, get the full path from the exported variable
+# The target file needs to be divided evenly between all the jobs. i.e. if the target file is 1000 lines long and there are 40 jobs, each job should have 25 lines of the target file
 # bash arithmetic division actually gives the quotient, so if there are 1010 lines and 40 jobs the division would still give 25 lines per a job and the last 10 lines would be lost
 # to compensate for this we will find the remainder (RemTar) and then add an extra line to the first $RemTar jobs
 ArrNum=$SGE_TASK_ID
@@ -136,7 +137,7 @@ funcRunStep
 #Need to wait for all UnifiedGenotyper jobs to finish and then remerge all the vcfs
 if [[ "$ArrNum" -eq 1 ]]; then
     NextJob="Remerge vcf files"
-    QsubCmd="qsub -hold_jid $JOB_ID -o stdostde/ -e stdostde/ $EXOMPPLN/ExmVC.2ug.MergeVCF.sh -i $VcfDir -r $RefFil -l $LogFil -P"
+    QsubCmd="qsub -hold_jid $JOB_ID -o stdostde/ -e stdostde/ $EXOMPPLN/ExmVC.2.MergeVCF.sh -i $VcfDir -r $RefFil -l $LogFil -P"
     if [[ "$AllowMisencoded" == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
     if [[ "$BadET" == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
     funcPipeLine

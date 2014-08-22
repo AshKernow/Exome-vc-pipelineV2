@@ -21,7 +21,7 @@ parser.add_option("-m", "--maf", dest="MAFFilter",help="user specified allele fr
 parser.set_defaults(GREATER=False)
 parser.add_option("-G", "--greater", action='store_true', dest="GREATER", help="Filter for variants with maf greater than or equal to the filter level. Default is less than or equal to.")
 parser.set_defaults(WITHIN=False)
-parser.add_option("-W", "--within", action='store_true', dest="WITHIN", help="Filter for allele frequency within the cohort. Default is just 1KG and ESP frequencys.")
+parser.add_option("-W", "--within", action='store_true', dest="WITHIN", help="Filter for allele frequency within the cohort. Default is just 1KG and ESP frequencies.")
 
 
 (options, args) = parser.parse_args()
@@ -55,15 +55,21 @@ else:
     
 OrigCount=0
 FiltCount=0
+ChrCount=0
+print "Start filtering..."
 for line in VCF:
     OrigCount=OrigCount+1
-    # Map column name to number, and then find column numbers of each set of trios
+    # Output vcf header to new vcf
     if '#' in line:
         Outvcf.write(line)
     # Start filtering variants
     if '#' not in line:
-        # Variant must first pass 1KG and GO-ESP frequencies, MQ0 threshold, and be exonic
         linelist=line.split("\t")
+        ChrPresent=linelist[0]
+        if ChrCount != ChrPresent:
+            print "Chromosome "+str(ChrPresent)
+            ChrCount=ChrPresent
+        # Variant must first pass 1KG and GO-ESP frequencies, MQ0 threshold, and be exonic
         INFOstring=linelist[7]
         INFOcolumnList=INFOstring.split(";")
         INFOdict={}
@@ -74,7 +80,15 @@ for line in VCF:
         
         # Get values for later
         KGscore=INFOdict.get('1KGfreq',0)
+        if type(KGscore) is str:
+            KGscore=KGscore.split(",")
+            KGscore=float(KGscore[0])
+        
         ESPscore=INFOdict.get('ESPfreq',0)
+        if type(ESPscore) is str:
+            ESPscore=ESPscore.split(",")
+            ESPscore=float(ESPscore[0])
+        
         
         # Check if KG passes threshold
         PassMAF=True
@@ -88,16 +102,16 @@ for line in VCF:
         
         #check within cohort if requested
         PassCHT=True
-        if WithinCohort:
-            AAFcnt=0
-            QualityList=[ i.split(':') for i in linelist[9:] ]
-            Genotypes=[ QualityList[i][0] for i in range(0,len(QualityList)) ]
-            nSamples=len(Genotypes)
-            NonRef= float( len(Genotypes) - ( Genotypes.count('0/0') + Genotypes.count('./.') ) )/ float(len(Genotypes))
-            if NonRef < MafCutOff and GreaterThan:
-                PassMAF=False
-            if NonRef > MafCutOff and not GreaterThan:
-                PassMAF=False
+        #if WithinCohort:
+        #    AAFcnt=0
+        #    QualityList=[ i.split(':') for i in linelist[9:] ]
+        #    Genotypes=[ QualityList[i][0] for i in range(0,len(QualityList)) ]
+        #    nSamples=len(Genotypes)
+        #    NonRef= float( len(Genotypes) - ( Genotypes.count('0/0') + Genotypes.count('./.') ) )/ float(len(Genotypes))
+        #    if NonRef < MafCutOff and GreaterThan:
+        #        PassMAF=False
+        #    if NonRef > MafCutOff and not GreaterThan:
+        #        PassMAF=False
         
         if PassMAF and PassCHT:
             Outvcf.write(line)
@@ -107,3 +121,5 @@ Outlog.write("  Number of variants in original VCF: "+str(OrigCount)+"\n")
 Outlog.write("  Number of de novo variants: "+str(FiltCount)+"\n")
 TimeNow=str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
 Outlog.write("  Filtering Finished: "+TimeNow+"\n")
+print "Done"
+

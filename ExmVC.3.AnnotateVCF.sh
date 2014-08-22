@@ -36,13 +36,14 @@ ExmVC.5.AnnotatewithANNOVAR.sh -i <InputFile> -r <reference_file> -l <logfile> -
 "
 
 PipeLine="false"
+FullCadd="false"
 
-while getopts i:r:l:CPBH opt; do
+while getopts i:r:l:CFPBH opt; do
     case "$opt" in
         i) InpFil="$OPTARG";;
         r) RefFil="$OPTARG";; 
         l) LogFil="$OPTARG";;
-        C) FullCadd=="true";;
+        C) FullCadd="true";;
         P) PipeLine="true";;
         B) BadET="true";;
         H) echo "$usage"; exit;;
@@ -63,17 +64,21 @@ source $EXOMPPLN/exome.lib.sh #library functions begin "func" #library functions
 ##Set local parameters
 ArrNum=$SGE_TASK_ID
 funcFilfromList #if the input is a list get the appropriate input file for this job of the array --> $InpFil
-AnnNam=${InpFil/.vcf/}
-if [[ -z $LogFil ]]; then LogFil=$AnnNam.AnnVCF.log; fi # a name for the log file
-TmpLog=$AnnNam.AnnVCF.temp.log #temporary log file
-AnnDir=$AnnNam.AnnVCF.tempdir; mkdir -p $AnnDir
-TmpVar=$AnnDir/$AnnNam.tempvar
-AnnFil=$AnnNam.annovar
-SnpEffFil=$AnnNam.SnpEff.vcf
-VcfFil=${InpFil/vcf/annotated.vcf} # final annotated output file
-VcfFilAnn=$VcfFil.Ann # annovar annotated VCF output file
-TmpDir=$AnnNam.AnnVCF.tempdir; mkdir -p $TmpDir #temporary directory
-GatkLog=$AnnNam.gatklog #a log for GATK to output to, this is then trimmed and added to the script log
+VcfFil=$InpFil #input vcf file
+VcfNam=`basename $VcfFil`
+VcfNam=${VcfNam/.vcf/} #basename for outputs
+if [[ -z $LogFil ]]; then LogFil=$VcfNam.AnnVCF.log; fi # a name for the log file
+TmpLog=$VcfNam.AnnVCF.temp.log #temporary log file
+AnnDir=$VcfNam.AnnVCF.tempdir; mkdir -p $AnnDir
+TmpVar=$AnnDir/$VcfNam.tempvar
+AnnFil=$VcfNam.annovar
+SnpEffFil=$VcfNam.SnpEff.vcf #SnEff annotations files
+VcfFilAnn=$VcfNam.Ann.vcf # annovar annotated VCF output file
+VcfFilSnF=$VcfNam.SnF.vcf # SnpEff annotated VCF output file
+VcfFilOut=$VcfNam.annotated.vcf # final annotated output file
+
+TmpDir=$VcfNam.AnnVCF.tempdir; mkdir -p $TmpDir #temporary directory
+GatkLog=$VcfNam.gatklog #a log for GATK to output to, this is then trimmed and added to the script log
 infofields="-A AlleleBalance -A BaseQualityRankSumTest -A Coverage -A HaplotypeScore -A HomopolymerRun -A MappingQualityRankSumTest -A MappingQualityZero -A QualByDepth -A RMSMappingQuality -A SpanningDeletions -A FisherStrand -A InbreedingCoeff" #Annotation fields for GATK to output into vcf files
 
 #Start Log File
@@ -82,7 +87,7 @@ funcWriteStartLog
 
 ##Convert VCF to ANNOVAR input file using ANNOVAR - use old vcf method
 StepNam="Convert VCF to ANNOVAR input file using ANNOVAR"
-StepCmd="convert2annovar.pl $InpFil -format vcf4old -includeinfo | cut -f 1-10 > $TmpVar" #command to be run
+StepCmd="convert2annovar.pl $VcfFil -format vcf4old -includeinfo | cut -f 1-10 > $TmpVar" #command to be run
 funcRunStep
 
 ##Generate Annotation table
@@ -127,36 +132,40 @@ StepCmd="cat $InpFil | vcf-annotate -a $AnnFil.gz
  -d key=INFO,ID=CADDphred,Number=1,Type=Float,Description='Whole-genome phred-scaled CADD score'
  > $VcfFilAnn"
 funcRunStep
+VcfFil=$VcfFilAnn
 
 
 #Get snpEff annotations
 StepNam="Get snpEff annotations"
-StepCmd="java -Xmx6G -jar $SNPEFF eff -o gatk  -v GRCh37.75 $VcfFilAnn > $SnpEffFil"
-funcRunStep
+StepCmd="java -Xmx6G -jar $SNPEFF eff -o gatk  -v GRCh37.75 $VcfFil > $SnpEffFil"
+#funcRunStep
 
 #Incorporate snpEff annotations into vcf with GATK, also ensure complete GATK annotations (dbSNP etc.)
 StepNam="Joint call gVCFs" >> $TmpLog
 StepCmd="java -Xmx5G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -T VariantAnnotator 
  -R $REF
- -L $VcfFilAnn
- -V $VcfFilAnn
- -o $VcfFil
+ -L $VcfFil
+ -V $VcfFil
+ -o $VcfFilSnF
  -D $DBSNP
   $infofields
   -A SnpEff
   --snpEffFile $SnpEffFil  \
  -log $GatkLog" #command to be run
 funcGatkAddArguments # Adds additional parameters to the GATK command depending on flags (e.g. -B or -F)
-funcRunStep
+#funcRunStep
+#rm $VcfFilAnn
+#VcfFil=$VcfFilSnF
 ## Note GATK throws a lot of warnings related to SnpEff annotations that it doesn't like. 
 ## e.g. WARN  14:55:15,040 SnpEff - Skipping malformed SnpEff effect field at 10:100184062. Error was: "SPLICE_SITE_REGION is not a recognized effect type". Field was: "SPLICE_SITE_REGION(LOW||||HPS1|processed_transcript|CODING|ENST00000478087|7)"
 ## They don't effect the annotations of the other variants. 
-rm $VcfFilAnn
 
 #Get VCF stats with python script
+mv $VcfFil $VcfFilOut
+VcfFil=$VcfFilOut
 StepNam="Get VCF stats"
-StepCmd="python $EXOMPPLN/VCF_summary_Stats.py -v $VcfFil -o ${InpFil/vcf/stats.tsv}"
+StepCmd="python $EXOMPPLN/VCF_summary_Stats.py -v $VcfFil -o ${VcfFil/vcf/stats.tsv}"
 funcRunStep
 
 #Call next steps of pipeline if requested

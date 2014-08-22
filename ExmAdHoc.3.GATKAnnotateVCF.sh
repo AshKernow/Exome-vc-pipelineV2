@@ -36,7 +36,7 @@ ExmAdHoc.3.GATKAnnotateVCF.sh -i <InputFile> -r <reference_file> -t <target inte
 BadET="false"
 
 #get arguments
-while getopts i:r:l:H opt; do
+while getopts i:r:l:BH opt; do
     case "$opt" in
         i) InpFil="$OPTARG";;
         r) RefFil="$OPTARG";; 

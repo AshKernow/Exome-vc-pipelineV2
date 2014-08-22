@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -cwd -l mem=8G,time=4:: -N BamMtr 
+#$ -cwd -l mem=8G,time=6:: -N BamMtr 
 
 # This script takes a bam file and generates insert size, GC content and quality score metrics using Picard
 #    InpFil - i - (required) - Path to Bam file or a file containing a list of bam files one per line (file names must end ".list")

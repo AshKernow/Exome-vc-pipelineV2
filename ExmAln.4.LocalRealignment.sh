@@ -1,8 +1,9 @@
 #!/bin/bash
-#$ -cwd -l mem=10G,time=10:: -N LocRln
+#$ -cwd -l mem=10G,time=12:: -N LocRln
 
 # This script takes a bam file and performs local indel realignment using GATK
-#    InpFil - (required) - Path to Bam file to be realigned
+#    InpFil - (required) - Path to Bam file to be realigned or a file containing a list of bam files one per line (file name must end ".list")
+#            if it is a list then call the job as an array job with -t 1:n where n is the number of bams
 #    RefFil - (required) - shell file containing variables with locations of reference files, jar files, and resource directories; see list below for required variables
 #    LogFil - (optional) - File for logging progress
 #    TgtBed - (optional) - Exome capture kit targets bed file (must end .bed for GATK compatability) ; may be specified using a code corresponding to a variable in the RefFil giving the path to the target file
@@ -30,9 +31,9 @@
 
 #set default arguments
 usage="
- ExmAln.4.LocalRealignment.sh -i <InputFile> -r <reference_file> -t <targetfile> -l <logfile> -PABH
+ (-t <X>-<Y> [if providing a list]) ExmAln.4.LocalRealignment.sh -i <InputFile> -r <reference_file> -t <targetfile> -l <logfile> -PABH
 
-     -i (required) - Path to Bam file
+     -i (required) - Path to Bam file or \".list\" file containing a multiple paths
      -r (required) - shell file containing variables with locations of reference files and resource directories
      -l (optional) - Log file
      -t (optional) - Exome capture kit targets or other genomic intervals bed file (must end .bed for GATK compatability); this file is required if calling the pipeline but otherwise can be omitted
@@ -74,7 +75,9 @@ source $RefFil
 source $EXOMPPLN/exome.lib.sh #library functions begin "func" #library functions begin "func"
 
 #Set Local Variables
+ArrNum=$SGE_TASK_ID
 funcGetTargetFile #If the target file has been specified using a code, get the full path from the exported variable
+funcFilfromList #if the input is a list get the appropriate input file for this job of the array --> $InpFil
 BamFil=`readlink -f $InpFil` #resolve absolute path to bam
 BamNam=`basename $BamFil | sed s/.bam//` #a name to use for the various files
 if [[ -z "$LogFil" ]];then LogFil=$BamNam.LocReal.log; fi # a name for the log file
@@ -125,8 +128,8 @@ StepCmd="samtools flagstat $RalFil > $FlgStat"
 funcRunStep
 
 #Call next step in pipeline if requested 
-NextJob="Generate Base Quality Score Recalibration table"
-QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.5.GenerateBQSRTable.sh -i $RalFil -r $RefFil -t $TgtBed -l $LogFil -P"
+NextJob="Run Base Quality Score Recalibration"
+QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.5.BaseQualityScoreRecalibration.sh -i $RalFil -r $RefFil -t $TgtBed -l $LogFil -P -K"
 if [[ "$AllowMisencoded" == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
 if [[ "$BadET" == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
 funcPipeLine

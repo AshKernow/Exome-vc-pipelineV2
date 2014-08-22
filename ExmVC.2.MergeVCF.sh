@@ -70,6 +70,8 @@ funcWriteStartLog
 
 ##Merge and sort variant files 
 StepName="Merge & sort with vcftools" # Description of this step - used in log
+CountVCF=$(ls $VcfDir/ | grep vcf$ | wc)
+echo "Merging ... "$CountVCF" ... vcfs" >> $TmpLog
 StepCmd="vcf-concat -p $VcfDir/*vcf | vcf-sort -c > $VcfFil"
 funcRunStep
 

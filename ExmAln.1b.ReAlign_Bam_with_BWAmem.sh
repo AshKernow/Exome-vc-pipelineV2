@@ -29,7 +29,6 @@
 # bwa mem <http://bio-bwa.sourceforge.net/> <http://sourceforge.net/projects/bio-bwa/files/>
 # java <http://www.oracle.com/technetwork/java/javase/overview/index.html>
 # picard <http://picard.sourceforge.net/> <http://sourceforge.net/projects/picard/files/>
-# HTSlib <https://github.com/samtools/htslib> <https://github.com/samtools/htslib/archive/master.zip>
 
 ## This file also requires exome.lib.sh - which contains various functions used throughout the Exome analysis scripts; this file should be in the same directory as this script
 
@@ -128,10 +127,10 @@ fi
 ###Align using BWA mem algorithm
 # use HTSlib to shuffle the bam | then tranform it to an interleaved fastq discarding an singletons to a separate file as they mess up the interleaving | transform sam back to bam
 StepName="Align with BWA mem"
-StepCmd="htscmd bamshuf -uOn 128 $BamFil tmp |
- htscmd bam2fq -s $SngFil -aO - |
+StepCmd="samtools bamshuf -uOn 128 $BamFil tmp |
+ samtools bam2fq -s $SngFil -O - |
  gzip | bwa mem -M -R \"$RgHeader\" -t 6 -p $REF - |
- htscmd samview -bS - > $AlnFil"
+ samtools samview -bS - > $AlnFil"
 funcRunStep
 
 #Sort the bam file by coordinate

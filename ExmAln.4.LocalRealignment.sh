@@ -9,6 +9,7 @@
 #    TgtBed - (optional) - Exome capture kit targets bed file (must end .bed for GATK compatability) ; may be specified using a code corresponding to a variable in the RefFil giving the path to the target file
 #    Flag - A - AllowMisencoded - see GATK manual (https://www.broadinstitute.org/gatk/gatkdocs/org_broadinstitute_sting_gatk_CommandLineGATK.html#--allow_potentially_misencoded_quality_scores), causes GATK to ignore abnormally high quality scores that would otherwise indicate that the quality score encoding was incorrect
 #    Flag - P - PipeLine - call the next step in the pipeline at the end of the job
+#    Flag - K - KillFile - this will cause the script to delete the original bam file once the recalibration has successfully completed
 #    Flag - B - BadET - prevent GATK from phoning home
 #    Flag - F - Fix mis-encoded base quality scores - see GATK manual. GATK will subtract 31 from all quality scores; used to fix encoding in some datasets (especially older Illumina ones) which starts at Q64 (see https://en.wikipedia.org/wiki/FASTQ_format#Encoding)
 #    Help - H - (flag) - get usage information
@@ -38,6 +39,7 @@ usage="
      -l (optional) - Log file
      -t (optional) - Exome capture kit targets or other genomic intervals bed file (must end .bed for GATK compatability); this file is required if calling the pipeline but otherwise can be omitted
      -P (flag) - Call next step of exome analysis pipeline after completion of script
+     -K (flag) - Causes the script to delete the original bam file once the recalibration has successfully completed
      -A (flag) - AllowMisencoded - see GATK manual
      -B (flag) - Prevent GATK from phoning home
      -F (flag) - Fix mis-encoded base quality scores - see GATK manual
@@ -48,15 +50,17 @@ AllowMisencoded="false"
 PipeLine="false"
 BadET="false"
 FixMisencoded="false"
+KillFile="false"
 
 #get arguments
-while getopts i:r:l:t:PABFH opt; do
+while getopts i:r:l:t:PKABFH opt; do
     case "$opt" in
         i) InpFil="$OPTARG";;
         r) RefFil="$OPTARG";; 
         l) LogFil="$OPTARG";;
         t) TgtBed="$OPTARG";; 
         P) PipeLine="true";;
+        K) KillFile="true";;
         A) AllowMisencoded="true";;
         B) BadET="true";;
         F) FixMisencoded="true";;
@@ -129,8 +133,9 @@ funcRunStep
 
 #Call next step in pipeline if requested 
 NextJob="Run Base Quality Score Recalibration"
-QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.5.BaseQualityScoreRecalibration.sh -i $RalFil -r $RefFil -t $TgtBed -l $LogFil -P -K"
+QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.5.BaseQualityScoreRecalibration.sh -i $RalFil -r $RefFil -t $TgtBed -l $LogFil -P"
 if [[ "$AllowMisencoded" == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
+if [[ "$KillFile" == "true" ]]; then QsubCmd=$QsubCmd" -K"; fi
 if [[ "$BadET" == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
 funcPipeLine
 
@@ -139,4 +144,4 @@ funcWriteEndLog
 
 #Clean up
 rm $TgtFil
-if [[ -e $RalFil ]]; then rm $BamFil ${BamFil/bam/bai}; fi
+if [[ -e $RalFil ]] && [[ "$KillFile" == "true" ]]; then rm $BamFil ${BamFil/bam/bai}; fi

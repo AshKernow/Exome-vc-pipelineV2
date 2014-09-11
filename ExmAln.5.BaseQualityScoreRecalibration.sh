@@ -10,6 +10,8 @@
 #    Flag - P - PipeLine - call the next step in the pipeline at the end of the job
 #    Flag - K - KillFile - this will cause the script to delete the original bam file once the recalibration has successfully completed
 #    Flag - A - AllowMisencoded - see GATK manual, causes GATK to ignore abnormally high quality scores that would otherwise indicate that the quality score encoding was incorrect
+#    Flag - Q - NoOldQual - Do not output original quality scores (reduces output bam size)
+#    Flag - M - NoUnMapped - Do not keep unmapped reads - anything not mapped to target capture regions (reduces output bam size)
 #    Flag - B - BadET - prevent GATK from phoning home
 #    Help - H - (flag) - get usage information
 
@@ -43,6 +45,8 @@ usage="
      -K (flag) - Causes the script to delete the original bam file once the recalibration has successfully completed
      -A (flag) - AllowMisencoded - see GATK manual
      -B (flag) - Prevent GATK from phoning home
+     -Q (flag) - NoOldQual - Do not output original quality scores (reduces output bam size)
+     -M (flag) - NoUnMapped - Do not keep unmapped reads - anything not mapped to target capture regions (reduces output bam size)
      -H (flag) - echo this message and exit
 "
 
@@ -50,9 +54,11 @@ AllowMisencoded="false"
 PipeLine="false"
 BadET="false"
 KillFile="false"
+NoOldQual="false"
+NoUnMapped="false"
 
 #get arguments
-while getopts i:r:t:l:PKABH opt; do
+while getopts i:r:t:l:PKAQMBH opt; do
     case "$opt" in
         i) InpFil="$OPTARG";;
         r) RefFil="$OPTARG";; 
@@ -61,6 +67,8 @@ while getopts i:r:t:l:PKABH opt; do
         P) PipeLine="true";;
         K) KillFile="true";;
         A) AllowMisencoded="true";;
+        Q) NoOldQual="true";;
+        M) NoUnMapped="true";;
         B) BadET="true";;
         H) echo "$usage"; exit;;
     esac
@@ -120,10 +128,11 @@ StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -BQSR $RclTable
  -ip 50
  -o $RclFil 
- --emit_original_quals 
  --filter_mismatching_base_and_quals
  -log $GatkLog" #command to be run
 funcGatkAddArguments # Adds additional parameters to the GATK command depending on flags (e.g. -B or -F)
+if [[ "$NoOldQual" == "true" ]]; then StepCmd=$StepCmd" --emit_original_quals"; fi
+if [[ "$NoUnMapped" == "true" ]]; then StepCmd=$StepCmd" -L $TgtBed"; fi
 funcRunStep
 
 #Get flagstat

@@ -78,7 +78,7 @@ funcRunStep
 ##Generate Annotation table
 StepNam="Build Annotation table using ANNOVAR"
 StepCmd="table_annovar.pl $TmpVar $ANNHDB --buildver hg19 --remove -protocol refGene,esp6500si_all,esp6500si_aa,esp6500si_ea,1000g2012apr_all,1000g2012apr_eur,1000g2012apr_amr,1000g2012apr_asn,1000g2012apr_afr, -operation g,f,f,f,f,f,f,f,f -otherinfo  -nastring \"\"  --outfile $AnnFil"
-#funcRunStep
+funcRunStep
 AnnFil=$AnnFil.hg19_multianno.txt
 
 ##sort, replace spaces and semi-colons, zip and index

@@ -70,7 +70,7 @@ if [[ $? -ne 0 ]]; then #check exit status and if error then...
     rm $TmpLog
     exit 1
 fi
-if [[ "$StepCmd" == *"$GATKJAR"* ]]; then funcTrimGATKlog; fi
+if [[ "$StepCmd" == *GenomeAnalysisTK.jar* ]]; then funcTrimGATKlog; fi
 echo "- End $StepName `date`...">> $TmpLog # if no error log the completion of the step
 echo "-----------------------------------------------------------------------" >> $TmpLog
 }

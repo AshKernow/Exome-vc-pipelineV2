@@ -7,6 +7,7 @@
 #    TgtBed - (optional) - Exome capture kit targets bed file (must end .bed for GATK compatability) ; may be specified using a code corresponding to a variable in the RefFil giving the path to the target file- only required if calling pipeline
 #    LogFil - (optional) - File for logging progress
 #    Flag - B - BadET - prevent GATK from phoning home
+#    Flag - F - Fix mis-encoded base quality scores - see GATK manual. GATK will subtract 31 from all quality scores; used to fix encoding in some datasets (especially older Illumina ones) which starts at Q64 (see https://en.wikipedia.org/wiki/FASTQ_format#Encoding)
 #    Help - H - (flag) - get usage information
 
 #list of required vairables in reference file:
@@ -27,25 +28,28 @@
 
 #set default arguments
 usage="
-(-t <X>-<Y> [if providing a list]) ExmVC.1.HaplotypeCaller_GVCFmode.sh -i <InputFile> -r <reference_file> -t <targetfile> -l <logfile> -PABH
+(-t <X>-<Y> [if providing a list]) ExmVC.1.HaplotypeCaller_GVCFmode.sh -i <InputFile> -r <reference_file> -t <targetfile> -l <logfile> -FBH
 
      -i (required) - Path to Bam file for variant calling or \".list\" file containing a multiple paths
      -r (required) - shell file containing variables with locations of reference files and resource directories
      -t (required) - Exome capture kit targets or other genomic intervals bed file (must end .bed for GATK compatability)
      -l (optional) - Log file
      -B (flag) - Prevent GATK from phoning home
+     -F (flag) - Fix mis-encoded base quality scores - see GATK manual
      -H (flag) - echo this message and exit
 "
 
 BadET="false"
+FixMisencoded="false"
 
-while getopts i:r:n:l:t:PBH opt; do
+while getopts i:r:n:l:t:BFH opt; do
     case "$opt" in
         i) InpFil="$OPTARG";;
         r) RefFil="$OPTARG";; 
         l) LogFil="$OPTARG";;
         t) TgtBed="$OPTARG";;
         B) BadET="true";;
+        F) FixMisencoded="true";;
         H) echo "$usage"; exit;;
   esac
 done

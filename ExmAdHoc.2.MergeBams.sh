@@ -71,8 +71,6 @@ echo $BamNam
 if [[ -z "$LogFil" ]]; then LogFil=$BamNam.MrgBam.log; fi # a name for the log file
 MrgDir=wd.$BamNam.merge # directory in which processing will be done
 MrgFil=$BamNam.merged.bam #filename for bwa-mem aligned file
-SrtFil=$BamNam.merged.sorted.bam #output file for sorted bam
-DdpFil=$BamNam.merged.mkdup.bam #output file with PCR duplicates marked
 FlgStat=$BamNam.merged.flagstat #output file for bam flag stats
 IdxStat=$BamNam.merged.idxstats #output file for bam index stats
 mkdir -p $MrgDir # create working directory
@@ -85,53 +83,35 @@ TmpDir=$BamNam.MrgBam.tempdir; mkdir -p $TmpDir #temporary directory
 ProcessName="Merge with samtools"
 funcWriteStartLog
 
-#Merge with Picard
-MrgInPut=$(awk '{print "INPUT="$1}' $InpFil)
-StepName="Merge with Picard"
-StepCmd="java -Xmx4G -Djava.io.tmpdir=$TmpDir -jar $PICARD/MergeSamFiles.jar
- $MrgInPut
- OUTPUT=$MrgFil
- CREATE_INDEX=TRUE
- ASSUME_SORTED=true
- USE_THREADING=true
- TMP_DIR=$TmpDir
- MAX_RECORDS_IN_RAM=30000000
- SORT_ORDER=coordinate
- VALIDATION_STRINGENCY=SILENT"
-#commandtoberun
+#Merge with samtools
+StepName="Merge with Samtools"
+StepCmd="samtools merge -b $InpFil $MrgFil" #commandtoberun
 funcRunStep
 
-#Mark the duplicates
-StepName="Mark PCR Duplicates using PICARD"
-StepCmd="java -Xmx4G -Djava.io.tmpdir=$TmpDir -jar $PICARD/MarkDuplicates.jar
- INPUT=$MrgFil
- OUTPUT=$DdpFil
- METRICS_FILE=$DdpFil.dup.metrics.txt
- CREATE_INDEX=TRUE"
+#Index with samtools
+StepName="Index bam with Samtools"
+StepCmd="samtools index $MrgFil" #commandtoberun
 funcRunStep
-rm $MrgFil ${MrgFil/bam/bai}
-
 
 #Get flagstat
 StepName="Output flag stats using Samtools"
-StepCmd="samtools flagstat $DdpFil > $FlgStat"
+StepCmd="samtools flagstat $MrgFil > $FlgStat"
 funcRunStep
 
 #copy the index for idxstat
-cp ${DdpFil/bam/bai} $DdpFil.bai
 #get index stats
 StepName="Output idx stats using Samtools"
-StepCmd="samtools idxstats $DdpFil > $IdxStat"
+StepCmd="samtools idxstats $MrgFil > $IdxStat"
 funcRunStep
-rm $DdpFil.bai
+rm $MrgFil.bai
 
 #Call next steps of pipeline if requested
 NextJob="Run Local realignment"
-QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.4.LocalRealignment.sh -i $DdpFil -r $RefFil -t $TgtBed -l $LogFil -P -B"
+QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.4.LocalRealignment.sh -i $MrgFil -r $RefFil -t $TgtBed -l $LogFil -P -B"
 funcPipeLine
 if [[ "$Metrix" == "true" ]]; then PipeLine="true"; fi #if the bam metrics were requested this will activate the next job
 NextJob="Get basic bam metrics"
-QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.3a.Bam_metrics.sh -i $DdpFil -r $RefFil -l $LogFil"
+QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.3a.Bam_metrics.sh -i $MrgFil -r $RefFil -l $LogFil"
 funcPipeLine
 
 #End Log

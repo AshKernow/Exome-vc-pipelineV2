@@ -19,7 +19,7 @@ export TGVCF="$EXOMRES/b37/1000G_omni2.5.b37.vcf"
 export ONEKG="$EXOMRES/b37/1000G_phase1.snps.high_confidence.b37.vcf" # 1000 genome SNPs vcf
 export STHSH="$EXOMRES/b37/stampy_b37" # hash file for Stampy - omit ".sthash" extension for compatibility with Stampy
 export STIDX="$EXOMRES/b37/stampy_b37" # genome index file for Stampy - omit ".stidx" extension for compatibility with Stampy
-export ANNHDB="/ifs/home/c2b2/af_lab/ads2202/scratch/src/annovar/humandb/" #Location of annovar databases
+export ANNHDB="/ifs/home/c2b2/af_lab/ads2202/scratch/bin/annovar/humandb/" #Location of annovar databases
 
 #GATK no-phone-home key
 export ETKEY="$EXOMRES/ads2202_c2b2.columbia.edu.key"

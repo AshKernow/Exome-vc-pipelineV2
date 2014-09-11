@@ -79,7 +79,6 @@ GatkLog=$VcfNam.GgVCF.gatklog #a log for GATK to output to, this is then trimmed
 TmpLog=$VcfNam.GgVCF.temp.log #temporary log file
 TmpDir=$VcfNam.GgVCF.tempdir; mkdir -p $TmpDir #temporary directory
 infofields="-A AlleleBalance -A BaseQualityRankSumTest -A Coverage -A HomopolymerRun -A MappingQualityRankSumTest -A MappingQualityZero -A QualByDepth -A RMSMappingQuality -A SpanningDeletions -A FisherStrand -A InbreedingCoeff" #Annotation fields to output into vcf files
-
 #Start Log File
 ProcessName="Joint calling of gVCFs with GATK GenotypeGVCFs" # Description of the script - used in log
 funcWriteStartLog
@@ -90,7 +89,7 @@ StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -T GenotypeGVCFs
  -R $REF
  -L $TgtBed
- -V $InpFil
+ -V $InpFil 
  -o $VcfFil
  -D $DBSNP
  -log $GatkLog" #command to be run

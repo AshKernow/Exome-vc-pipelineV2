@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -cwd  -l mem=12G,time=16:: -N HCgVCF
+#$ -cwd  -l mem=10G,time=24:: -N HCgVCF
 
 #This script takes a bam file or a list of bam files (filename must end ".list") and runs variant calling using the HaplotypeCaller in gVCF mode
 #    InpFil - (required) - Path to Bam file to be aligned. Alternatively a file with a list of bams can be provided and the script run as an array job. List file name must end ".list"
@@ -77,7 +77,7 @@ VcfFil=$BamNam.g.vcf #Output File
 GatkLog=$BamNam.HCgVCF.gatklog #a log for GATK to output to, this is then trimmed and added to the script log
 TmpLog=$BamNam.HCgVCF.temp.log #temporary log file
 TmpDir=$BamNam.HCgVCF.tempdir; mkdir -p $TmpDir #temporary directory
-infofields="-A AlleleBalance -A BaseQualityRankSumTest -A Coverage -A HaplotypeScore -A HomopolymerRun -A MappingQualityRankSumTest -A MappingQualityZero -A QualByDepth -A RMSMappingQuality -A SpanningDeletions -A FisherStrand -A InbreedingCoeff" #Annotation fields to output into vcf files
+infofields="-A AlleleBalance -A BaseQualityRankSumTest -A Coverage -A HaplotypeScore -A HomopolymerRun -A MappingQualityRankSumTest -A MappingQualityZero -A QualByDepth -A RMSMappingQuality -A SpanningDeletions -A FisherStrand -A InbreedingCoeff -A ClippingRankSumTest -A DepthPerSampleHC" #Annotation fields to output into vcf files
 
 #Start Log File
 ProcessName="Genomic VCF generatation with GATK HaplotypeCaller" # Description of the script - used in log
@@ -102,6 +102,7 @@ StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -pairHMM VECTOR_LOGLESS_CACHING
  -rf BadCigar
  $infofields
+ --filter_mismatching_base_and_quals
  -log $GatkLog" #command to be run
 funcGatkAddArguments # Adds additional parameters to the GATK command depending on flags (e.g. -B or -F)
 funcRunStep

@@ -164,9 +164,9 @@ StepCmd="java -Xmx9G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  --variant $VcfFil
  -o $VcfNam.hardfiltered.vcf
  --clusterWindowSize 10
- --filterExpression \"QUAL < 30.0 || QD < 2.0\"
+ --filterExpression \"QUAL<30.0||QD<2.0\"
  --filterName \"StandardFilters\"
- --filterExpression \"MQ0 >= 4 && (MQ0 / DP) > 0.1\"
+ --filterExpression \"MQ0>=4&&(MQ0/DP)>0.1\"
  --filterName \"HARD_TO_VALIDATE\"
  --missingValuesInExpressionsShouldEvaluateAsFailing
  -log $GatkLog" #command to be run

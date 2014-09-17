@@ -107,6 +107,11 @@ echo "----------------------------------------------------------------" >> $TmpL
 StepName="Align with BWA mem"
 StepCmd="bwa mem -M -t 6 -R \"$rgheader\" $REF $fastq1 $fastq2 |
  samtools view -b - > $AlnFil"
+if [[ $FixMisencoded == "true" ]]; then 
+ StepCmd="bwa mem -M -t 6 -R \"$rgheader\" $REF $fastq1 $fastq2 |
+ seqtk seq -Q64 -V - |
+ samtools view -b - > $AlnFil"
+fi
 funcRunStep
 
 #Sort the bam file by coordinate
@@ -145,7 +150,6 @@ QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.3a.Bam_metrics.sh -i $D
 funcPipeLine
 NextJob="Run Local realignment"
 QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.4.LocalRealignment.sh -i $DdpFil -r $RefFil -t $TgtBed -l $LogFil -P -B"
-if [[ $FixMisencoded == "true" ]]; then QsubCmd=$QsubCmd" -F"; fi
 funcPipeLine
 
 #End Log

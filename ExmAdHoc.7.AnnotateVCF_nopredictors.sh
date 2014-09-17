@@ -62,7 +62,6 @@ AnnDir=$AnnNam.AnnVCF.tempdir; mkdir -p $AnnDir
 TmpVar=$AnnDir/$AnnNam.tempvar
 AnnFil=$AnnNam.annovar
 VcfFil=${InpFil/vcf/annotated.vcf} # final annotated output file
-VcfFilAnn=$VcfFil.Ann # annovar annotated VCF output file
 TmpDir=$AnnNam.AnnVCF.tempdir; mkdir -p $TmpDir #temporary directory
 
 
@@ -88,7 +87,7 @@ head -n 1 $AnnFil > $AnnFil.tempheader
 tail -n+2 $AnnFil | sort -V | awk '{gsub( / /, ""); print}' | awk '{gsub( /;/, ","); print}' >> $AnnFil.tempheader
 mv $AnnFil.tempheader $AnnFil
 bgzip $AnnFil
-tabix  -s 1 -b 2 -e 3 $AnnFil.gz
+tabix -S 1 -s 1 -b 2 -e 3 $AnnFil.gz
 
 #Incorporate annovar annotations into vcf with vcftools
 StepNam="Incorporate annovar annotations into vcf with vcftools"
@@ -100,7 +99,7 @@ StepCmd="cat $InpFil | vcf-annotate -a $AnnFil.gz
  -d key=INFO,ID=AAChange,Number=1,Type=String,Description='Amino Acid change'
  -d key=INFO,ID=ESPfreq,Number=1,Type=Float,Description='Exome Sequencing Project 6500 alternative allele frequency'
  -d key=INFO,ID=1KGfreq,Number=1,Type=Float,Description='1000 genome alternative allele frequency'
- > $VcfFilAnn"
+ > $VcfFil"
 funcRunStep
 
 #End Log

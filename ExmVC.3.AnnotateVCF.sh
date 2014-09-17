@@ -107,7 +107,7 @@ head -n 1 $AnnFil > $AnnFil.tempheader
 tail -n+2 $AnnFil | sort -V | awk '{gsub( / /, ""); print}' | awk '{gsub( /;/, ","); print}' >> $AnnFil.tempheader
 mv $AnnFil.tempheader $AnnFil
 bgzip $AnnFil
-tabix  -s 1 -b 2 -e 3 $AnnFil.gz
+tabix -S 1 -s 1 -b 2 -e 3 $AnnFil.gz
 
 #Incorporate annovar annotations into vcf with vcftools
 StepNam="Incorporate annovar annotations into vcf with vcftools"

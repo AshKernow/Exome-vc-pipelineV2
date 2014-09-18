@@ -184,7 +184,7 @@ VcfFil=$VcfNam.filtered.vcf
 
 #Get VCF stats with python script
 StepNam="Get VCF stats"
-StepCmd="python $EXOMPPLN/VCF_summary_Stats.py -v $VcfFil -o ${VcfFil/vcf/stats.tsv}"
+StepCmd="python $EXOMPPLN/ExmPY.VCF_summary_Stats.py -v $VcfFil -o ${VcfFil/vcf/stats.tsv}"
 funcRunStep
 
 #End Log

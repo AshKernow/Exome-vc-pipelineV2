@@ -165,7 +165,7 @@ funcGatkAddArguments # Adds additional parameters to the GATK command depending 
 mv $VcfFil $VcfFilOut
 VcfFil=$VcfFilOut
 StepNam="Get VCF stats"
-StepCmd="python $EXOMPPLN/VCF_summary_Stats.py -v $VcfFil -o ${VcfFil/vcf/stats.tsv}"
+StepCmd="python $EXOMPPLN/ExmPY.VCF_summary_Stats.py -v $VcfFil -o ${VcfFil/vcf/stats.tsv}"
 funcRunStep
 
 #Call next steps of pipeline if requested

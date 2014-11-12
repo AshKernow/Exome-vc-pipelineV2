@@ -14,7 +14,7 @@
 # $EXOMPPLN - directory containing exome analysis pipeline scripts
 
 #list of required tools:
-# java <http://www.oracle.com/technetwork/java/javase/overview/index.html>
+# vcftools - http://vcftools.sourceforge.net/index.html
 
 ## This file also requires exome.lib.sh - which contains various functions used throughout the Exome analysis scripts; this file should be in the same directory as this script
 
@@ -104,6 +104,12 @@ funcRunStep
 NextJob="Annotate with Annovar"
 QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmVC.3.AnnotateVCF.sh -i $VcfFil -r $RefFil -l $LogFil -P"
 funcPipeLine
+
+#NextJob="Recalibrate Variant Quality"
+#QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmVC.4.RecalibrateVariantQuality.sh -i $VcfFil -r $RefFil -l $LogFil -P"
+#if [[ "$AllowMisencoded" == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
+#if [[ "$BadET" == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi 
+#funcPipeLine
 
 #End Log
 funcWriteEndLog

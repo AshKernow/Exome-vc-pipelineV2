@@ -1,10 +1,11 @@
 #!/bin/bash
-#$ -cwd -l mem=24G,time=12:: -N VQSRFilt
+#$ -cwd -l mem=24G,time=6:: -N VQSRFilt
 
 #This script takes a raw VCF file and performs GATK's variant quality score recalibration
 #    InpFil - (required) - Path to VCF file or a list of VCF Files to be recalibrated
 #    RefFil - (required) - shell file containing variables with locations of reference files, jar files, and resource directories; see list below for required variables
 #    LogFil - (optional) - File for logging progress
+#    Flag - P - PipeLine - call the next step in the pipeline at the end of the job
 #    Flag - B - BadET - prevent GATK from phoning home
 #    Help - H - (flag) - get usage information
 
@@ -30,6 +31,7 @@ usage="ExmVC.3.RecalibrateVariantQuality.sh -i <InputFile> -r <reference_file> -
      -i (required) - Path to list of Bam files for variant calling
      -r (required) - shell file containing variables with locations of reference files and resource directories
      -l (optional) - Log file
+     -P (flag) - Call next step of exome analysis pipeline after completion of script
      -B (flag) - Prevent GATK from phoning home
      -H (flag) - echo this message and exit
 "
@@ -37,11 +39,12 @@ usage="ExmVC.3.RecalibrateVariantQuality.sh -i <InputFile> -r <reference_file> -
 BadET="false"
 
 PipeLine="false"
-while getopts i:r:l:BH opt; do
+while getopts i:r:l:PBH opt; do
     case "$opt" in
         i) InpFil="$OPTARG";;
         r) RefFil="$OPTARG";; 
         l) LogFil="$OPTARG";;
+        P) PipeLine="true";;
         B) BadET="true";;
         H) echo "$usage"; exit;;
   esac
@@ -168,19 +171,27 @@ StepCmd="java -Xmx9G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  --filterName \"StandardFilters\"
  --filterExpression \"MQ0>=4&&(MQ0/DP)>0.1\"
  --filterName \"HARD_TO_VALIDATE\"
+ --filterExpression \"FS>=45.0\"
+ --filterName \"FS_Bad_SNP\"
+ --filterExpression \"FS>=25.0&&FS<40.0\"
+ --filterName \"FS_Mid_SNP\"
+ --filterExpression \"QD<2.5\"
+ --filterName \"QD_Bad_SNP\"
+ --filterExpression \"QD>=2.5&&QD<4.0\"
+ --filterName \"QD_Mid_SNP\"
+ --filterExpression \"QD<1.0\"
+ --filterName \"LowQD_Indel\"
+ --filterExpression \"FS>=25.0\"
+ --filterName \"FSBias_Indel\"
+ --filterExpression \"ReadPosRankSum<=-3.0\"
+ --filterName \"RPBias_Indel\"
  --missingValuesInExpressionsShouldEvaluateAsFailing
  -log $GatkLog" #command to be run
-funcGatkAddArguments # Adds additional parameters to the GATK command depending on flags (e.g. -B or -F)
+funcGatkAddArguments # Adds additional parameters to the GATK command depending on flags
+ --filterExpression \"e.g. -B or -F\"
 funcRunStep
 rm $VcfFil
 VcfFil=$VcfNam.hardfiltered.vcf
-
-#Filter VCF with vcftools
-StepName="Create filtered vcf using vcftools" # Description of this step - used in log
-StepCmd="vcftools --vcf $VcfFil --remove-filtered-all --recode --recode-INFO-all --out $VcfNam.filtered"
-funcRunStep
-mv $VcfNam.filtered.recode.vcf $VcfNam.filtered.vcf
-VcfFil=$VcfNam.filtered.vcf
 
 #Get VCF stats with python script
 StepNam="Get VCF stats"

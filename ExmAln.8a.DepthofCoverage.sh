@@ -8,6 +8,7 @@
 #    TgtBed - (required) - Exome capture kit targets bed file (must end .bed for GATK compatability)
 #    LogFil - (optional) - File for logging progress
 #    Flag - B - BadET - prevent GATK from phoning home
+#    Flag - F - Fix mis-encoded base quality scores - see GATK manual. GATK will subtract 31 from all quality scores; used to fix encoding in some datasets (especially older Illumina ones) which starts at Q64 (see https://en.wikipedia.org/wiki/FASTQ_format#Encoding)
 #    Help - H - (flag) - get usage information
 
 #list of required vairables in reference file:
@@ -33,18 +34,21 @@ usage="
      -t (required) - Exome capture kit targets bed file (must end .bed for GATK compatability)
      -l (optional) - Log file
      -B (flag) - Prevent GATK from phoning home
+     -F (flag) - Fix mis-encoded base quality scores - see GATK manual
      -H (flag) - echo this message and exit
 "
 
 BadEt="false"
+FixMisencoded="false"
 
 #get arguments
-while getopts i:r:t:l:BH opt; do
+while getopts i:r:t:l:FBH opt; do
     case "$opt" in
         i) InpFil="$OPTARG";;
         r) RefFil="$OPTARG";; 
         t) TgtBed="$OPTARG";; 
         l) LogFil="$OPTARG";;
+        F) FixMisencoded="true";;
         B) BadET="true";;
         H) echo "$usage"; exit;;
     esac

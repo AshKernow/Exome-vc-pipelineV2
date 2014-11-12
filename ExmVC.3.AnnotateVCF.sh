@@ -72,6 +72,7 @@ TmpLog=$VcfNam.AnnVCF.temp.log #temporary log file
 AnnDir=$VcfNam.AnnVCF.tempdir; mkdir -p $AnnDir
 TmpVar=$AnnDir/$VcfNam.tempvar
 AnnFil=$VcfNam.annovar
+AnnModRscript=$VcfNam.ModifyAnnovarTable.rscript.r
 SnpEffFil=$VcfNam.SnpEff.vcf #SnEff annotations files
 VcfFilAnn=$VcfNam.Ann.vcf # annovar annotated VCF output file
 VcfFilSnF=$VcfNam.SnF.vcf # SnpEff annotated VCF output file
@@ -85,15 +86,22 @@ infofields="-A AlleleBalance -A BaseQualityRankSumTest -A Coverage -A HaplotypeS
 ProcessName="Annotate VCF" # Description of the script - used in log
 funcWriteStartLog
 
-##Convert VCF to ANNOVAR input file using ANNOVAR - use old vcf method
+##Convert VCF to ANNOVAR input file using ANNOVAR - get all samples then merge to form a file containing all possible alternate alleles
 StepNam="Convert VCF to ANNOVAR input file using ANNOVAR"
-StepCmd="convert2annovar.pl $VcfFil -format vcf4old -includeinfo | cut -f 1-10 > $TmpVar" #command to be run
+StepCmd="convert2annovar.pl -includeinfo -allsample -format vcf4 $VcfFil -outfile $TmpVar;
+touch TmpVar.All ;
+for i in \$(find | grep $TmpVar); do 
+cut -f 1-10 \$i > TmpVar.temp ;
+cat TmpVar.temp TmpVar.All | sort | uniq > TmpVar.All.Uniq ;
+mv TmpVar.All.Uniq TmpVar.All ;
+done ;
+mv TmpVar.All $TmpVar.All.Uniq" #command to be run
 funcRunStep
 
 ##Generate Annotation table
+# A note regarding the annotation of multi-allelic variants: If annnovar uses "." as the NA string whilst building the annotation table (i.e. to indicate that there is no annotation for an allele), vcftools' vcf-annotate correctly ignores the annotation and adds nothing to the INFO field. For variants with multiple alternate alleles, we want to add a "." to the vcf INFO field to indicate missing data for those alternates where some alleles have annotation, i.e. e.g  "...;SIFTscr=1.234,.;..." to indicate a SIFT score for the first alternate allele and no annotation for the second. With a "." in the annovar table for the second allele we would just get "...;SIFTscr=1.234;...". Therefore we set the NA string to "%%%". The "%%%" string will be added to vcf by vcf-annotate ("...;SIFTscr=1.234,%%%;...") and then we can use sed to replace it with ".". The only problem then is that we would get "...;SIFTscr=.,.;..." for variants with no annotation at all and we don't want that, so an R script is used first to replace the "%%%" with "." in the annovar annotation table for variants where all alleles lack a particular annotation.
 StepNam="Build Annotation table using ANNOVAR"
-#StepCmd="table_annovar_cadd.pl $TmpVar $ANNHDB --buildver hg19 --remove -protocol refGene,esp6500si_all,esp6500si_aa,esp6500si_ea,1000g2012apr_all,1000g2012apr_eur,1000g2012apr_amr,1000g2012apr_asn,1000g2012apr_afr,ljb23_all,caddgt10,clinvar -operation g,f,f,f,f,f,f,f,f,f,f,f -otherinfo  -nastring \"\"  --outfile $AnnFil"
-StepCmd="table_annovar_cadd.pl $TmpVar $ANNHDB --buildver hg19 --remove -protocol refGene,esp6500si_all,1000g2012apr_all,ljb23_all,caddgt10 -operation g,f,f,f,f -otherinfo  -nastring \"\"  --outfile $AnnFil"
+StepCmd="table_annovar_cadd.pl $TmpVar.All.Uniq $ANNHDB --buildver hg19 --remove -protocol refGene,esp6500si_all,esp6500si_aa,esp6500si_ea,1000g2014oct_all,1000g2014oct_eur,1000g2014oct_amr,1000g2014oct_eas,1000g2014oct_afr,1000g2014oct_sas,exac02,ljb26_all,caddgt10 -operation g,f,f,f,f,f,f,f,f,f,f,f,f -otherinfo  -nastring %%%  --outfile $AnnFil"
 if [[ "$FullCadd" == "true" ]]; then 
     StepCmd=${StepCmd/caddgt10/cadd}
     echo "  Using full CADD database..." >> $TmpLog
@@ -101,43 +109,95 @@ fi
 funcRunStep
 AnnFil=$AnnFil.hg19_multianno.txt
 
+## Replace %%% in annotation table
+StepNam="Fix annotation table - replace %%%"
+echo "options(stringsAsFactors=F)
+dat <- read.table(file=\"$AnnFil\", skip=1, sep=\"\t\")
+hed <- read.table(file=\"$AnnFil\", nrows=1, sep=\"\t\")
+colnames(dat) <- c(hed[-length(hed)], \"CHROM\", \"POS\", \"ID\", \"REF\", \"ALT\")
+ind <- paste(dat[,1], dat[,2])
+dup <- unique(ind[duplicated(ind)])
+out <- dat[!ind%in%dup,]
+for(i in 1:ncol(out)){
+  out[,i] <- gsub(\"%%%\", \".\", out[,i])
+}
+for(i in dup){
+  temp <- dat[ind==i,]
+  for(j in 1:ncol(temp)){
+    if(all(temp[,j]==\"%%%\")){
+      temp[,j] <- gsub(\"%%%\", \".\", temp[,j])
+    }
+  }
+  out <- rbind(out, temp)
+}
+write.table(out, \"$AnnFil\", col.names=T, row.names=F, sep=\"\t\", quote=F)
+" > $AnnModRscript
+StepCmd="Rscript $AnnModRscript"
+funcRunStep
+
 ##sort, replace spaces and semi-colons, zip and index
 # - annovar output has spaces in the RefSeq function code, e.g. "synonymous SNV", but they are not permitted in vcf format and other tools (e.g. GATK) will throw an error if they encounter them
 # - annovar separates multiple gene names in the RefSeq gene name field with semi-colons, this causes and error in the vcf
-head -n 1 $AnnFil > $AnnFil.tempheader
-tail -n+2 $AnnFil | sort -V | awk '{gsub( / /, ""); print}' | awk '{gsub( /;/, ","); print}' >> $AnnFil.tempheader
-mv $AnnFil.tempheader $AnnFil
-bgzip $AnnFil
-tabix -S 1 -s 1 -b 2 -e 3 $AnnFil.gz
+StepNam="Fix annotation table - remove illegal characters"
+StepCmd="head -n 1 $AnnFil > $AnnFil.tempheader; 
+tail -n+2 $AnnFil | sort -V | awk '{gsub( / /, \"\"); print}' | awk '{gsub( /;/, \",\"); print}' >> $AnnFil.tempheader; 
+mv $AnnFil.tempheader $AnnFil; 
+bgzip $AnnFil; 
+tabix -S 1 -s 1 -b 2 -e 3 $AnnFil.gz"
+funcRunStep
+
 
 #Incorporate annovar annotations into vcf with vcftools
 StepNam="Incorporate annovar annotations into vcf with vcftools"
-StepCmd="cat $InpFil | vcf-annotate -a $AnnFil.gz
- -c -,-,-,-,-,INFO/VarFunc,INFO/GeneName,INFO/VarClass,INFO/AAChange,INFO/ESPfreq,INFO/1KGfreq,INFO/SIFTscr,-,INFO/SIFTprd,-,-,INFO/PP2scr,INFO/PP2prd,-,-,-,INFO/MutTscr,-,INFO/MutTprd,-,-,-,-,-,-,-,-,-,-,-,INFO/GERP,INFO/PhyloP,INFO/SiPhy,INFO/CADDraw,INFO/CADDphred,CHROM,POS,-,REF,ALT
- -d key=INFO,ID=VarFunc,Number=1,Type=String,Description='Genomic region/Sequence Function'
- -d key=INFO,ID=GeneName,Number=1,Type=String,Description='refGene GeneName'
+StepCmd="cat $InpFil | vcf-annotate -a $AnnFil.gz 
+ -c -,-,-,-,-,-,-,-,INFO/VarClass,INFO/AAChange,INFO/ESPfreq,INFO/ESP.aa.freq,INFO/ESP.ea.freq,INFO/1KGfreq,INFO/1KG.eur.freq,INFO/1KG.amr.freq,INFO/1KG.eas.freq,INFO/1KG.afr.freq,INFO/1KG.sas.freq,INFO/ExAC.freq,INFO/SIFTscr,INFO/SIFTprd,INFO/PP2.hdiv.scr,INFO/PP2.hdiv.prd,INFO/PP2.hvar.scr,INFO/PP2.hvar.prd,-,-,INFO/MutTscr,INFO/MutTprd,INFO/MutAscr,INFO/MutAprd,-,-,-,-,-,-,-,-,-,INFO/GERP,-,INFO/PhyloP,INFO/SiPhy,INFO/CADDraw,INFO/CADDphred,CHROM,POS,-,REF,ALT
  -d key=INFO,ID=VarClass,Number=1,Type=String,Description='Mutational Class'
  -d key=INFO,ID=AAChange,Number=1,Type=String,Description='Amino Acid change'
  -d key=INFO,ID=ESPfreq,Number=1,Type=Float,Description='Exome Sequencing Project 6500 alternative allele frequency'
- -d key=INFO,ID=1KGfreq,Number=1,Type=Float,Description='1000 genome alternative allele frequency'
+ -d key=INFO,ID=ESP.aa.freq,Number=1,Type=Float,Description='Exome Sequencing Project 6500 alternative allele frequency - African Americans'
+ -d key=INFO,ID=ESP.ea.freq,Number=1,Type=Float,Description='Exome Sequencing Project 6500 alternative allele frequency - European Americans'
+ -d key=INFO,ID=1KGfreq,Number=1,Type=Float,Description='1000 genome alternative allele frequency - all populations'
+ -d key=INFO,ID=1KG.eur.freq,Number=1,Type=Float,Description='1000 genome alternative allele frequency - European'
+ -d key=INFO,ID=1KG.amr.freq,Number=1,Type=Float,Description='1000 genome alternative allele frequency - Admixed American'
+ -d key=INFO,ID=1KG.eas.freq,Number=1,Type=Float,Description='1000 genome alternative allele frequency - East Asian'
+ -d key=INFO,ID=1KG.afr.freq,Number=1,Type=Float,Description='1000 genome alternative allele frequency - African'
+ -d key=INFO,ID=1KG.sas.freq,Number=1,Type=Float,Description='1000 genome alternative allele frequency - South Asian'
+ -d key=INFO,ID=ExAC.freq,Number=1,Type=Float,Description='Exome Aggregatation Consortium alternative allele frequency - all populations'
  -d key=INFO,ID=SIFTscr,Number=1,Type=Float,Description='SIFT score'
  -d key=INFO,ID=SIFTprd,Number=1,Type=String,Description='SIFT prediction'
- -d key=INFO,ID=PP2scr,Number=1,Type=Float,Description='PolyPhen2 HVAR score'
- -d key=INFO,ID=PP2prd,Number=1,Type=Character,Description='PolyPhen2 HVAR prediction'
+ -d key=INFO,ID=PP2.hdiv.scr,Number=1,Type=Float,Description='PolyPhen2 HDIV score'
+ -d key=INFO,ID=PP2.hdiv.prd,Number=1,Type=Character,Description='PolyPhen2 HDIV prediction'
+ -d key=INFO,ID=PP2.hvar.scr,Number=1,Type=Float,Description='PolyPhen2 HVAR score'
+ -d key=INFO,ID=PP2.hvar.prd,Number=1,Type=Character,Description='PolyPhen2 HVAR prediction'
  -d key=INFO,ID=MutTscr,Number=1,Type=Float,Description='MutationTaster score'
  -d key=INFO,ID=MutTprd,Number=1,Type=Character,Description='MutationTaster prediction'
+ -d key=INFO,ID=MutAscr,Number=1,Type=Float,Description='MutationAssessor score'
+ -d key=INFO,ID=MutAprd,Number=1,Type=Character,Description='MutationAssessor prediction'
  -d key=INFO,ID=GERP,Number=1,Type=Float,Description='GERP++ score'
  -d key=INFO,ID=PhyloP,Number=1,Type=Float,Description='PhyloP score'
  -d key=INFO,ID=SiPhy,Number=1,Type=Float,Description='SiPhy scores'
  -d key=INFO,ID=CADDraw,Number=1,Type=Float,Description='Whole-genome raw CADD score'
- -d key=INFO,ID=CADDphred,Number=1,Type=Float,Description='Whole-genome phred-scaled CADD score'
- -d key=INFO,ID=ClinVar,Number=1,Type=Character,Description='CLINVAR database Entry'
- > $VcfFilAnn"
-funcRunStep
+ -d key=INFO,ID=CADDphred,Number=1,Type=Float,Description='Whole-genome phred-scaled CADD score' > $VcfFilAnn"
+funcRunStep 
 VcfFil=$VcfFilAnn
-# -,-,-,-,-,INFO/VarFunc,INFO/GeneName,INFO/VarClass,INFO/AAChange,INFO/ESPfreq,-,-,INFO/1KGfreq,-,-,-,-,INFO/SIFTscr,-,INFO/SIFTprd,-,-,INFO/PP2scr,INFO/PP2prd,-,-,-,INFO/MutTscr,-,INFO/MutTprd,-,-,-,-,-,-,-,-,-,-,-,INFO/GERP,INFO/PhyloP,INFO/SiPhy,INFO/CADDraw,INFO/CADDphred,INFO/ClinVar,CHROM,POS,-,REF,ALT
 
-# -d key=INFO,ID=ClinVar,Number=1,Type=Character,Description='CLINVAR database Entry'
+#for Function and gene name we only want to annotate per locus not per an allele so we make a separate table:
+StepNam="Make per locus annotation table"
+StepCmd="gunzip -c $AnnFil | cut -f 1,2,3,4,5,6,7,47-53 | head -n 1 > $AnnFil.bylocus ; 
+gunzip -c $AnnFil | cut -f 1,2,3,4,5,6,7,47-53 | tail -n +2 | sort -k 2,2 -u | sort -V >> $AnnFil.bylocus ; 
+bgzip $AnnFil.bylocus ;
+tabix -S 1 -s 1 -b 2 -e 3 $AnnFil.bylocus.gz"
+funcRunStep
+
+#Incorporate annovar annotations into vcf with vcftools
+StepNam="Incorporate annovar annotations into vcf with vcftools"
+StepCmd="cat $VcfFil | vcf-annotate -a $AnnFil.bylocus.gz 
+ -c -,-,-,-,-,INFO/VarFunc,INFO/GeneName,CHROM,POS,-,REF,ALT
+ -d key=INFO,ID=VarFunc,Number=1,Type=String,Description='Genomic region/Sequence Function'
+ -d key=INFO,ID=GeneName,Number=1,Type=String,Description='refGene GeneName' > $VcfFilAnn.ann2;
+sed -i 's/%%%/./g' $VcfFilAnn.ann2"
+funcRunStep 
+mv $VcfFilAnn.ann2 $VcfFil
 
 #Get snpEff annotations
 StepNam="Get snpEff annotations"
@@ -169,7 +229,7 @@ funcGatkAddArguments # Adds additional parameters to the GATK command depending 
 mv $VcfFil $VcfFilOut
 VcfFil=$VcfFilOut
 StepNam="Get VCF stats"
-StepCmd="python $EXOMPPLN/ExmPY.VCF_summary_Stats.py -v $VcfFil -o ${VcfFil/vcf/stats.tsv}"
+StepCmd="python $EXOMPPLN/ExmPY.VCF_summary_Stats_New.py -v $VcfFil -o ${VcfFil/vcf/stats.tsv}"
 funcRunStep
 
 #Call next steps of pipeline if requested

@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+
 # this script takes as its input a vcf file and outputs a tab delimited containing various stats for each sample in the vcf, e.g. number of SNVs, number of InDels Ti/Tv ratios etc.
 
 from optparse import OptionParser
@@ -16,10 +17,11 @@ Nucleotides=['A','C','G','T']
 MutUnknown=['unknown']
 MutSilent=['synonymousSNV']
 MutMissense=['nonsynonymousSNV']
-MutNonsense=['stopgainSNV', 'stoploss SNV']
+MutNonsense=['stopgain', 'stoploss']
 MutNonframeshift=['nonframeshiftinsertion', 'nonframeshiftdeletion']
 MutFrameshift=['frameshiftinsertion', 'frameshiftdeletion']
 CodingCodes=['splicing', 'exonic', 'exonic;splicing']
+SplicingCodes=['splicing', 'exonic;splicing']
 CodingTypes=['Coding variants', 'Non-coding Variants', 'All variants']
 
 print "Running VCF stats..."
@@ -63,6 +65,7 @@ for WhichCode in CodingTypes:
         if '#' not in line:
             # Variant must first pass 1KG and GO-ESP frequencies, MQ0 threshold, and be exonic
             linelist=line.split("\t")
+            FILTER=linelist[6]
             INFOstring=linelist[7]
             INFOcolumnList=INFOstring.split(";")
             INFOdict={}
@@ -72,8 +75,19 @@ for WhichCode in CodingTypes:
                     INFOdict[FieldName]=FieldValue
             
             # Get values for later
-            KGscore=float(INFOdict.get('1KGfreq',2))
-            ESPscore=float(INFOdict.get('ESPfreq',2))
+            QDnumber=float(INFOdict.get('QD',0))
+            KGscore=str(INFOdict.get('1KGfreq',2))
+            KGscore=KGscore.split(",")
+            KGscore=KGscore[0]
+            if str(KGscore) == ".":
+                KGscore=2
+            KGscore=float(KGscore)
+            ESPscore=str(INFOdict.get('ESPfreq',2))
+            ESPscore=ESPscore.split(",")
+            ESPscore=ESPscore[0]
+            if str(ESPscore) == ".":
+                ESPscore=2
+            ESPscore=float(ESPscore)
             MutationFunct=str(INFOdict.get('VarFunc','none'))
             MutationClass=str(INFOdict.get('VarClass','none'))
             ID=str(linelist[2])
@@ -106,7 +120,21 @@ for WhichCode in CodingTypes:
             if WhichCode=="All variants":
                 codingPass=True
             
-            if codingPass:
+            FilterPass=False
+            #if "StandardFilters" not in FILTER and "HARD_TO_VALIDATE" not in FILTER and "Bad" not in FILTER and "Bias" not in FILTER:
+            #if "StandardFilters" not in FILTER and "HARD_TO_VALIDATE" not in FILTER and "Bad" not in FILTER and "Mid"  not in FILTER and "Low" not in FILTER and "Bias" not in FILTER:
+                #FilterPass=True
+            if "SnpCluster" not in FILTER and "StandardFilters" not in FILTER and "HARD_TO_VALIDATE" not in FILTER:
+                FilterPass=True
+            if "VQSRTrancheSNP99.90to100.00" in FILTER and QDnumber <= 5:
+                FilterPass=False
+            if "VQSRTrancheINDEL99.90to100.00" in FILTER and QDnumber <= 5:
+                FilterPass=False
+            if "VQSRTrancheSNP99.00to99.90" in FILTER and QDnumber <= 5:
+                FilterPass=False
+            if "VQSRTrancheINDEL99.00to99.90" in FILTER and QDnumber <= 5:
+                FilterPass=False            
+            if codingPass and FilterPass:
                 for i in range(0, SamLength):
                     ColNum=i+8
                     if i!=0:
@@ -145,7 +173,7 @@ for WhichCode in CodingTypes:
                             silentCount[i]=silentCount[i]+1
                         if MutationClass in MutMissense:
                             missenseCount[i]=missenseCount[i]+1
-                        if MutationClass in MutNonsense:
+                        if MutationClass in MutNonsense or MutationFunct in SplicingCodes:
                             nonsenseCount[i]=nonsenseCount[i]+1
                         if MutationClass in MutUnknown:
                             unknownCount[i]=unknownCount[i]+1

@@ -24,7 +24,7 @@ Outlog=open(LogOutputFilename,'w')
 import datetime
 TimeNow=str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
 Outlog.write("VCF filtering log: "+TimeNow+"\n")
-Outlog.write("VCF: "+"\n")
+Outlog.write("VCF: "+str(options.VCFfile)+"\n")
 
 
 # Read VCF file

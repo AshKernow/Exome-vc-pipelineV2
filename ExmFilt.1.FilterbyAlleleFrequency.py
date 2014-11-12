@@ -83,6 +83,12 @@ for line in VCF:
         if type(KGscore) is str:
             KGscore=KGscore.split(",")
             KGscore=float(KGscore[0])
+            
+        # Get withing cohort values for later
+        AFscore=INFOdict.get('AF',0)
+        if type(AFscore) is str:
+            AFscore=AFscore.split(",")
+            AFscore=float(AFscore[0])
         
         ESPscore=INFOdict.get('ESPfreq',0)
         if type(ESPscore) is str:
@@ -102,16 +108,11 @@ for line in VCF:
         
         #check within cohort if requested
         PassCHT=True
-        #if WithinCohort:
-        #    AAFcnt=0
-        #    QualityList=[ i.split(':') for i in linelist[9:] ]
-        #    Genotypes=[ QualityList[i][0] for i in range(0,len(QualityList)) ]
-        #    nSamples=len(Genotypes)
-        #    NonRef= float( len(Genotypes) - ( Genotypes.count('0/0') + Genotypes.count('./.') ) )/ float(len(Genotypes))
-        #    if NonRef < MafCutOff and GreaterThan:
-        #        PassMAF=False
-        #    if NonRef > MafCutOff and not GreaterThan:
-        #        PassMAF=False
+        if WithinCohort:
+            if AFscore < MafCutOff and GreaterThan:
+                PassCHT=False
+            if AFscore > MafCutOff and not GreaterThan:
+                PassCHT=False
         
         if PassMAF and PassCHT:
             Outvcf.write(line)

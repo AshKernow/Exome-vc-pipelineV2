@@ -92,7 +92,10 @@ for line in VCF:
         
         #Count GTs
         SampleNum=len(linelist)-9
+        RefCnt=0
+        NclCnt=0
         RefCnt=GTList.count('0/0')
+        NclCnt=GTList.count('./.')
         
         # Get number of alternate alleles
         AltAlls=linelist[4]
@@ -103,11 +106,11 @@ for line in VCF:
         if AltNum > 1:
             for refnum in range(0, AltNum):
                 HetCnt=0
+                AltCnt=0
                 HetStr='0/'+str(refnum+1)
-                AltStr=str(refnum+1)+'0/'+str(refnum+1)
+                AltStr=str(refnum+1)+'/'+str(refnum+1)
                 HetCnt=GTList.count(HetStr)
                 AltCnt=GTList.count(AltStr)
-                NclCnt=GTList.count('./.')
                 
                 
                 SttList=linelist[0:5]
@@ -120,10 +123,10 @@ for line in VCF:
         
         else:
             HetCnt=0
+            AltCnt=0
+            
             HetCnt=GTList.count('0/1')
             AltCnt=GTList.count('1/1')
-            
-            NclCnt=GTList.count('./.')
             
             OutputList=linelist[0:5]+[GeneName,VariantFunction,VariantClass,AAchange,KGscore,ESPscore,SIFTscore,SIFTprediction,PP2score,PP2prediction,MTscore,MTprediction,GERPscore,PHYLOPscore,CADDscore,QDnumber,QUAL]+linelist[7:8]+[RefCnt,HetCnt,AltCnt,NclCnt,SampleNum]
             OutputList= [ str(i) for i in OutputList ]

@@ -92,7 +92,8 @@ funcRunStep
 
 ##Generate Annotation table
 StepNam="Build Annotation table using ANNOVAR"
-StepCmd="table_annovar_cadd.pl $TmpVar $ANNHDB --buildver hg19 --remove -protocol refGene,esp6500si_all,esp6500si_aa,esp6500si_ea,1000g2012apr_all,1000g2012apr_eur,1000g2012apr_amr,1000g2012apr_asn,1000g2012apr_afr,ljb23_all,caddgt10 -operation g,f,f,f,f,f,f,f,f,f,f -otherinfo  -nastring \"\"  --outfile $AnnFil"
+#StepCmd="table_annovar_cadd.pl $TmpVar $ANNHDB --buildver hg19 --remove -protocol refGene,esp6500si_all,esp6500si_aa,esp6500si_ea,1000g2012apr_all,1000g2012apr_eur,1000g2012apr_amr,1000g2012apr_asn,1000g2012apr_afr,ljb23_all,caddgt10,clinvar -operation g,f,f,f,f,f,f,f,f,f,f,f -otherinfo  -nastring \"\"  --outfile $AnnFil"
+StepCmd="table_annovar_cadd.pl $TmpVar $ANNHDB --buildver hg19 --remove -protocol refGene,esp6500si_all,1000g2012apr_all,ljb23_all,caddgt10 -operation g,f,f,f,f -otherinfo  -nastring \"\"  --outfile $AnnFil"
 if [[ "$FullCadd" == "true" ]]; then 
     StepCmd=${StepCmd/caddgt10/cadd}
     echo "  Using full CADD database..." >> $TmpLog
@@ -112,7 +113,7 @@ tabix -S 1 -s 1 -b 2 -e 3 $AnnFil.gz
 #Incorporate annovar annotations into vcf with vcftools
 StepNam="Incorporate annovar annotations into vcf with vcftools"
 StepCmd="cat $InpFil | vcf-annotate -a $AnnFil.gz
- -c -,-,-,-,-,INFO/VarFunc,INFO/GeneName,INFO/VarClass,INFO/AAChange,INFO/ESPfreq,-,-,INFO/1KGfreq,-,-,-,-,INFO/SIFTscr,-,INFO/SIFTprd,-,-,INFO/PP2scr,INFO/PP2prd,-,-,-,INFO/MutTscr,-,INFO/MutTprd,-,-,-,-,-,-,-,-,-,-,-,INFO/GERP,INFO/PhyloP,INFO/SiPhy,INFO/CADDraw,INFO/CADDphred,CHROM,POS,-,REF,ALT
+ -c -,-,-,-,-,INFO/VarFunc,INFO/GeneName,INFO/VarClass,INFO/AAChange,INFO/ESPfreq,INFO/1KGfreq,INFO/SIFTscr,-,INFO/SIFTprd,-,-,INFO/PP2scr,INFO/PP2prd,-,-,-,INFO/MutTscr,-,INFO/MutTprd,-,-,-,-,-,-,-,-,-,-,-,INFO/GERP,INFO/PhyloP,INFO/SiPhy,INFO/CADDraw,INFO/CADDphred,CHROM,POS,-,REF,ALT
  -d key=INFO,ID=VarFunc,Number=1,Type=String,Description='Genomic region/Sequence Function'
  -d key=INFO,ID=GeneName,Number=1,Type=String,Description='refGene GeneName'
  -d key=INFO,ID=VarClass,Number=1,Type=String,Description='Mutational Class'
@@ -130,10 +131,13 @@ StepCmd="cat $InpFil | vcf-annotate -a $AnnFil.gz
  -d key=INFO,ID=SiPhy,Number=1,Type=Float,Description='SiPhy scores'
  -d key=INFO,ID=CADDraw,Number=1,Type=Float,Description='Whole-genome raw CADD score'
  -d key=INFO,ID=CADDphred,Number=1,Type=Float,Description='Whole-genome phred-scaled CADD score'
+ -d key=INFO,ID=ClinVar,Number=1,Type=Character,Description='CLINVAR database Entry'
  > $VcfFilAnn"
 funcRunStep
 VcfFil=$VcfFilAnn
+# -,-,-,-,-,INFO/VarFunc,INFO/GeneName,INFO/VarClass,INFO/AAChange,INFO/ESPfreq,-,-,INFO/1KGfreq,-,-,-,-,INFO/SIFTscr,-,INFO/SIFTprd,-,-,INFO/PP2scr,INFO/PP2prd,-,-,-,INFO/MutTscr,-,INFO/MutTprd,-,-,-,-,-,-,-,-,-,-,-,INFO/GERP,INFO/PhyloP,INFO/SiPhy,INFO/CADDraw,INFO/CADDphred,INFO/ClinVar,CHROM,POS,-,REF,ALT
 
+# -d key=INFO,ID=ClinVar,Number=1,Type=Character,Description='CLINVAR database Entry'
 
 #Get snpEff annotations
 StepNam="Get snpEff annotations"

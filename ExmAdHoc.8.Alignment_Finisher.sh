@@ -1,11 +1,11 @@
 #!/bin/bash
 #$ -cwd -l mem=8G,time=6:: -N FinishBWA
 
-# This script can be used to run the final steps of the bam to bam mapping scripts (ExmAln.1b) when they have completed the bwa-mem mapping but run out of time in the latter steps. It should be run with exactly the same arguments as the original mapping script and select the appropriate steps to run based on the existing files in the directory. It will automatically trigger the pipeline if requestd.
+# This script can be used to run the final steps of the bam to bam mapping scripts (ExmAln.1b) when they have completed the bwa-mem mapping but run out of time in the latter steps. It should be run within the alignment working directory, with the same arguments as the original mapping script and will select the appropriate steps to run based on the existing files in the directory. It will automatically trigger the pipeline if requestd.
 # Usage notes:
 # Please see ExmAln.1b.ReAlign_Bam_with_BWAmem.sh for full details 
 # The script should be run from within the mapping directory
-#    InpFil - (required) - Path to Bam file to be aligned. Alternatively a file with a list of bams can be provided and the script run in an array job. List file name must end ".list"
+#    InpFil - (required) - Path to the aligned Bam file to be aligned
 #    RefFil - (required) - shell file containing variables with locations of reference files and resource directories; see list below for required variables
 #    LogFil - (optional) - File for logging progress
 #    TgtBed - (optional) - Exome capture kit targets bed file (must end .bed for GATK compatability) ; may be specified using a code corresponding to a variable in the RefFil giving the path to the target file- only required if calling pipeline
@@ -34,7 +34,7 @@
 usage="
 ExmAdHoc.9.Alignment_Finisher.sh -i <InputFile> -r <reference_file> -t <target intervals file> -l <logfile> -PH
 
-     -i (optional) - Path to Bam file or \".list\" file containing a multiple paths
+     -i (optional) - Aligned bam file
      -r (optional) - shell file containing variables with locations of reference files and resource directories
      -l (optional) - Log file
      -t (optional) - Exome capture kit targets or other genomic intervals bed file (must end .bed for GATK compatability)
@@ -79,18 +79,16 @@ source $RefFil
 source $EXOMPPLN/exome.lib.sh #library functions begin "func"
 
 #set local variables
-BamNam=`echo $InpFil | sed s/.bwamem.*//`
 echo "    InpFil: "$BamNam"    RefFil: "$RefFil"    TgtBed: "$TgtBed
+BamNam=`echo $InpFil | sed s/.bwamem.*//`
 if [[ -z "$LogFil" ]]; then LogFil=$BamNam.BbB.log; fi # a name for the log file
 AlnFil=$BamNam.bwamem.bam #filename for bwa-mem aligned file
-echo $AlnFil
 SrtFil=$BamNam.bwamem.sorted.bam #output file for sorted bam
 DdpFil=$BamNam.bwamem.mkdup.bam #output file with PCR duplicates marked
 FlgStat=$BamNam.bwamem.flagstat #output file for bam flag stats
 IdxStat=$BamNam.idxstats #output file for bam index stats
 TmpLog=$BamNam.BwB.temp.log #temporary log file
 TmpDir=$BamNam.BwB.tempdir; mkdir -p $TmpDir #temporary directory
-echo $SrtFil
 
 #Sort the bam file by coordinate
 if [[ -e $AlnFil ]]; then
@@ -129,12 +127,11 @@ StepCmd="samtools idxstats $DdpFil > $IdxStat"
 funcRunStep
 
 #Call next steps of pipeline if requested
+NextJob="Run Local realignment"
+QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.2.HaplotypeCaller_GVCFmode.sh -i $DdpFil -r $RefFil -t $TgtBed -l $LogFil -P -B"
+funcPipeLine
 NextJob="Get basic bam metrics"
 QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.3a.Bam_metrics.sh -i $DdpFil -r $RefFil -l $LogFil"
-funcPipeLine
-NextJob="Run Local realignment"
-QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.4.LocalRealignment.sh -i $DdpFil -r $RefFil -t $TgtBed -l $LogFil -P -B"
-if [[ $FixMisencoded == "true" ]]; then QsubCmd=$QsubCmd" -F"; fi
 funcPipeLine
 
 #End Log

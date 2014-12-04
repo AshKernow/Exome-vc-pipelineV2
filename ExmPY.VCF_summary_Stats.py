@@ -55,7 +55,7 @@ for WhichCode in CodingTypes:
             referenceCount=[0]*SamLength
             KGRareCount=[0]*SamLength
             ESPRareCount=[0]*SamLength
-            RareCount=[0]*SamLength
+            ExACRareCount=[0]*SamLength
             NoAAF=[0]*SamLength
             KnownTiTvRat=[0]*SamLength
             NovelTiTvRat=[0]*SamLength
@@ -76,36 +76,33 @@ for WhichCode in CodingTypes:
             
             # Get values for later
             QDnumber=float(INFOdict.get('QD',0))
-            KGscore=str(INFOdict.get('1KGfreq',2))
-            KGscore=KGscore.split(",")
-            KGscore=KGscore[0]
-            if str(KGscore) == ".":
-                KGscore=2
-            KGscore=float(KGscore)
-            ESPscore=str(INFOdict.get('ESPfreq',2))
-            ESPscore=ESPscore.split(",")
-            ESPscore=ESPscore[0]
-            if str(ESPscore) == ".":
-                ESPscore=2
-            ESPscore=float(ESPscore)
+            
+            KGlist=str(INFOdict.get('1KGfreq',2))
+            KGlist=KGlist.split(",")
+            
+            ESPlist=str(INFOdict.get('ESPfreq',2))
+            ESPlist=ESPlist.split(",")
+            
+            ExAClist=str(INFOdict.get('ExACfreq',2))
+            ExAClist=ExAClist.split(",")
+            
             MutationFunct=str(INFOdict.get('VarFunc','none'))
+            
             MutationClass=str(INFOdict.get('VarClass','none'))
-            ID=str(linelist[2])
-            REF=linelist[3].split(",")
-            REF=[ str(i) for i in REF ]
-            ALT=linelist[4].split(",")
-            ALT=[ str(i) for i in ALT ]
+            MutationClass=MutationClass.split(",")
+            
             #Known or novel
+            ID=str(linelist[2])
             Known=False
             if 'DB' in INFOcolumnList:
                 Known=True
             if ID!=".":
                 Known=True
-            #Snp or Indel
-            InDel=True
-            if all(i in Nucleotides for i in REF) and all(i in Nucleotides for i in ALT):
-                InDel=False
             #Ti or Tv
+            REF=linelist[3].split(",")
+            REF=[ str(i) for i in REF ]
+            ALT=linelist[4].split(",")
+            ALT=[ str(i) for i in ALT ]
             Transversion=False
             Transition=False
             if (REF[0]=='A' and ALT[0]=='G') or (REF[0]=='G' and ALT[0]=='A') or (REF[0]=='C' and ALT[0]=='T') or (REF[0]=='T' and ALT[0]=='C'):
@@ -151,12 +148,20 @@ for WhichCode in CodingTypes:
                         else:
                             UnCalled[i]=UnCalled[i]+1
                     else:
-                        GT="0/0"
-                    if str(GT) != "0/0" or i==0:
-                        if InDel:
+                        GT="0/1"
+                    if str(GT) != "0/0":
+                        AltAllele=GT.split("/")
+                        if "0" in AltAllele: AltAllele.remove("0")
+                        AltAllele=list(set(AltAllele))
+                        AlNum=int(AltAllele[0])-1
+                        #Indel or SNP
+                        
+                        MutNum=min(AlNum, len(MutationClass)-1)
+                        if MutationClass[MutNum] in MutFrameshift or MutationClass[MutNum] in MutNonframeshift:
                             InDelCount[i]=InDelCount[i]+1
                         else:
                             SNVcount[i]=SNVcount[i]+1
+                        #Known or Unknown
                         if Known:
                             KnownCount[i]=KnownCount[i]+1
                             if Transition:
@@ -169,23 +174,40 @@ for WhichCode in CodingTypes:
                                 novelTiCount[i]=novelTiCount[i]+1
                             if Transversion:
                                 novelTvCount[i]=novelTvCount[i]+1
-                        if MutationClass in MutSilent:
+                        #Class
+                        if MutationClass[MutNum] in MutSilent:
                             silentCount[i]=silentCount[i]+1
-                        if MutationClass in MutMissense:
+                        if MutationClass[MutNum] in MutMissense:
                             missenseCount[i]=missenseCount[i]+1
-                        if MutationClass in MutNonsense or MutationFunct in SplicingCodes:
+                        if MutationClass[MutNum] in MutNonsense or MutationFunct in SplicingCodes:
                             nonsenseCount[i]=nonsenseCount[i]+1
-                        if MutationClass in MutUnknown:
+                        if MutationClass[MutNum] in MutUnknown:
                             unknownCount[i]=unknownCount[i]+1
-                        if MutationClass in MutFrameshift:
+                        if MutationClass[MutNum] in MutFrameshift:
                             frameShiftCount[i]=frameShiftCount[i]+1
+                        #Frequency
+                        KGscore=KGlist[min(AlNum, len(KGlist)-1)]
+                        if str(KGscore) == ".":
+                            KGscore=2
+                        KGscore=float(KGscore)
                         if KGscore<=0.01:
                             KGRareCount[i]=KGRareCount[i]+1
+                            
+                        ESPscore=ESPlist[min(AlNum, len(ESPlist)-1)]
+                        if str(ESPscore) == ".":
+                            ESPscore=2
+                        ESPscore=float(ESPscore)
                         if ESPscore<=0.01:
                             ESPRareCount[i]=ESPRareCount[i]+1
-                        if KGscore<=0.01 or ESPscore<=0.01:
-                            RareCount[i]=RareCount[i]+1
-                        if KGscore==2 and ESPscore==2:
+                            
+                        ExACscore=ExAClist[min(AlNum, len(ExAClist)-1)]
+                        if str(ExACscore) == ".":
+                            ExACscore=2
+                        ExACscore=float(ExACscore)
+                        if ExACscore<=0.01:
+                            ExACRareCount[i]=ExACRareCount[i]+1
+                        
+                        if KGscore==2 and ESPscore==2 and ExACscore==2:
                             NoAAF[i]=NoAAF[i]+1
     for i in range(0, SamLength):
         if int(knownTvCount[i])>0:
@@ -220,7 +242,7 @@ for WhichCode in CodingTypes:
     Output.write("\t".join(['Heterozygous']+[ str(i) for i in heterozygousCount ])+"\n")
     Output.write("\t".join(['Rare (AAF<0.01) - 1KG']+[ str(i) for i in KGRareCount ])+"\n")
     Output.write("\t".join(['Rare (AAF<0.01) - ESP']+[ str(i) for i in ESPRareCount ])+"\n")
-    Output.write("\t".join(['Rare (AAF<0.01) - 1KG or ESP']+[ str(i) for i in RareCount ])+"\n")
+    Output.write("\t".join(['Rare (AAF<0.01) - ExAC']+[ str(i) for i in ExACRareCount ])+"\n")
     Output.write("\t".join(['No AAF']+[ str(i) for i in NoAAF ])+"\n")
     Output.write("\t".join(['not called']+[ str(i) for i in UnCalled ])+"\n")
     Output.write("\t\n")

@@ -30,7 +30,7 @@
 
 #set default arguments
 usage="
-ExmVC.2.GenotypeGVCFs.sh -i <InputFile> -r <reference_file> -t <targetfile> -l <logfile> -PABH
+-t 1-<X> ExmVC.2.GenotypeGVCFs.sh -i <InputFile> -r <reference_file> -t <targetfile> -l <logfile> -PABH
 
      -i (required) - List of gVCF files. List file name must end \".list\"
      -r (required) - shell file containing variables with locations of reference files and resource directories

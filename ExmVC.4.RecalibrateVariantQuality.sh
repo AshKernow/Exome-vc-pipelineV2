@@ -187,8 +187,7 @@ StepCmd="java -Xmx9G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  --filterName \"RPBias_Indel\"
  --missingValuesInExpressionsShouldEvaluateAsFailing
  -log $GatkLog" #command to be run
-funcGatkAddArguments # Adds additional parameters to the GATK command depending on flags
- --filterExpression \"e.g. -B or -F\"
+funcGatkAddArguments # Adds additional parameters to the GATK command depending on flags e.g. -B or -F
 funcRunStep
 rm $VcfFil
 VcfFil=$VcfNam.hardfiltered.vcf

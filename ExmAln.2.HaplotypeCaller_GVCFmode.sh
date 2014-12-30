@@ -98,7 +98,7 @@ StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  --variant_index_parameter 128000
  -o $VcfFil
  -D $DBSNP
- --comp:HapMapV3 $HpMpV3 
+ --comp:HapMapV3 $HAPMAP 
  -pairHMM VECTOR_LOGLESS_CACHING
  -rf BadCigar
  $infofields

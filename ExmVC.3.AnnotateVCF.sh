@@ -198,7 +198,7 @@ mv $VcfFilAnn.ann2 $VcfFil
 #Get snpEff annotations
 StepNam="Get snpEff annotations"
 StepCmd="java -Xmx6G -jar $SNPEFF eff -o gatk  -v GRCh37.75 $VcfFil > $SnpEffFil"
-##funcRunStep
+###funcRunStep
 
 #Incorporate snpEff annotations into vcf with GATK, also ensure complete GATK annotations (dbSNP etc.)
 StepNam="Joint call gVCFs" >> $TmpLog
@@ -214,7 +214,7 @@ StepCmd="java -Xmx5G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
   --snpEffFile $SnpEffFil  \
  -log $GatkLog" #command to be run
 funcGatkAddArguments # Adds additional parameters to the GATK command depending on flags (e.g. -B or -F)
-##funcRunStep
+###funcRunStep
 #rm $VcfFilAnn
 #VcfFil=$VcfFilSnF
 ## Note GATK throws a lot of warnings related to SnpEff annotations that it doesn't like. 

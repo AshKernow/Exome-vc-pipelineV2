@@ -166,7 +166,7 @@ StepCmd="java -Xmx9G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -R $REF
  --variant $VcfFil
  -o $VcfNam.hardfiltered.vcf
- --clusterWindowSize 10
+ --clusterWindowSize -1
  --filterExpression \"QUAL<30.0||QD<2.0\"
  --filterName \"StandardFilters\"
  --filterExpression \"MQ0>=4&&(MQ0/DP)>0.1\"

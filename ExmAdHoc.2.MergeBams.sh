@@ -106,8 +106,9 @@ funcRunStep
 rm $MrgFil.bai
 
 #Call next steps of pipeline if requested
-NextJob="Run Local realignment"
-QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.4.LocalRealignment.sh -i $MrgFil -r $RefFil -t $TgtBed -l $LogFil -P -B"
+#Call next steps of pipeline if requested
+NextJob="Run Genotype VCF"
+QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.2.HaplotypeCaller_GVCFmode.sh -i $MrgFil -r $RefFil -t $TgtBed -l $LogFil -P -B"
 funcPipeLine
 if [[ "$Metrix" == "true" ]]; then PipeLine="true"; fi #if the bam metrics were requested this will activate the next job
 NextJob="Get basic bam metrics"

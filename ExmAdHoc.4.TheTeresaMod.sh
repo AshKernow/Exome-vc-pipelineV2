@@ -41,7 +41,7 @@ echo "Start Modification - $0:`date`" >> $LogFil
 echo "Input Bam: "$InpBam >> $LogFil
 
 #hpc workaround
-if [[ /bin/hostname==*hpc* ]]; then source $HOME/.bash_profile; fi
+#if [[ /bin/hostname==*hpc* ]]; then source $HOME/.bash_profile; fi
 
 if [[ -z $OutBam ]]; then
     OutBam=`basename $InpBam | sed 's/bam$/fixed.bam/'`
@@ -50,7 +50,8 @@ fi
 echo "Output Bam: "$OutBam >> $LogFil
 
 # bam --> sam | use awk to make modification | sam --> bam
-samtools view -h $InpBam | awk 'BEGIN { OFS = "\t" } { gsub(/#0\/3$/,"#0",$1); gsub(/#0\/4$/,"#0",$1); print $0 }' | samtools view -bS - > $OutBam
+samtools view -h $InpBam | awk 'BEGIN { OFS = "\t" } { gsub(/#0\/3$/,"#0",$1); gsub(/#0\/4$/,"#0",$1); print $0 }' | samtools view -bS - > $OutBam.temp
+mv $OutBam.temp $OutBam
 
 echo "Completed bam modification $0:`date`" >> $LogFil
 qstat -j $JOB_ID | grep -E "usage" >> $LogFil

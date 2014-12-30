@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -cwd -l mem=8G,time=6:: -N FinishBWA
+#$ -cwd -l mem=16G,time=6:: -N FinishBWA
 
 # This script can be used to run the final steps of the bam to bam mapping scripts (ExmAln.1b) when they have completed the bwa-mem mapping but run out of time in the latter steps. It should be run within the alignment working directory, with the same arguments as the original mapping script and will select the appropriate steps to run based on the existing files in the directory. It will automatically trigger the pipeline if requestd.
 # Usage notes:
@@ -127,7 +127,7 @@ StepCmd="samtools idxstats $DdpFil > $IdxStat"
 funcRunStep
 
 #Call next steps of pipeline if requested
-NextJob="Run Local realignment"
+NextJob="Run Genotype VCF"
 QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.2.HaplotypeCaller_GVCFmode.sh -i $DdpFil -r $RefFil -t $TgtBed -l $LogFil -P -B"
 funcPipeLine
 NextJob="Get basic bam metrics"

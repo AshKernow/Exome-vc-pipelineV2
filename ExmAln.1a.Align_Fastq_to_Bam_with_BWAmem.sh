@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -cwd -pe smp 6 -l mem=2G,time=6:: -N FQBWABam
+#$ -cwd -pe smp 6 -l mem=4G,time=6:: -N FQBWABam
 
 # This script takes fastq files and aligns them with BWA mem
 # The primary input is a TAB-delimited table containing the path to the fastq file and the RG read header for the output SAM file.
@@ -134,6 +134,14 @@ StepCmd="java -Xmx4G -Djava.io.tmpdir=$TmpDir -jar $PICARD/MarkDuplicates.jar
 funcRunStep
 rm $SrtFil ${SrtFil/bam/bai} #remove the "Sorted bam"
 
+#Call next steps of pipeline if requested
+NextJob="Run Genotype VCF"
+QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.2.HaplotypeCaller_GVCFmode.sh -i $DdpFil -r $RefFil -t $TgtBed -l $LogFil -B"
+funcPipeLine
+NextJob="Get basic bam metrics"
+QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.3a.Bam_metrics.sh -i $DdpFil -r $RefFil -l $LogFil"
+funcPipeLine
+
 #Get flagstat
 StepName="Output flag stats using Samtools"
 StepCmd="samtools flagstat $DdpFil > $FlgStat"
@@ -144,13 +152,6 @@ StepName="Output idx stats using Samtools"
 StepCmd="samtools idxstats $DdpFil > $IdxStat"
 funcRunStep
 
-#Call next steps of pipeline if requested
-NextJob="Run Local realignment"
-QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.2.HaplotypeCaller_GVCFmode.sh -i $DdpFil -r $RefFil -t $TgtBed -l $LogFil -P -B"
-funcPipeLine
-NextJob="Get basic bam metrics"
-QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.3a.Bam_metrics.sh -i $DdpFil -r $RefFil -l $LogFil"
-funcPipeLine
 
 #End Log
 funcWriteEndLog

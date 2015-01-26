@@ -1,7 +1,6 @@
 #!/bin/bash
 #$ -cwd -l mem=8G,time=12:: -N AnnVCF
 
-NewAnnDir=/ifs/scratch/c2b2/af_lab/ads2202/src/annovar
 
 #This script takes a bam file or a list of bam files (filename must end ".list") and runs variant calling using the HaplotypeCaller in gVCF mode
 #    InpFil - (required) - Path to Bam file to be aligned. Alternatively a file with a list of bams can be provided and the script run as an array job. List file name must end ".list"
@@ -87,17 +86,20 @@ infofields="-A AlleleBalance -A BaseQualityRankSumTest -A Coverage -A HaplotypeS
 ProcessName="Annotate VCF" # Description of the script - used in log
 funcWriteStartLog
 
-##Convert VCF to ANNOVAR input file using ANNOVAR - get all samples then merge to form a file containing all possible alternate alleles
+##Convert VCF to ANNOVAR input file using ANNOVAR - use a trimmed vcf to all possible alternate alleles using the withfreq flag (using all samples slows this down considerably as annovar calculated the allele frequencies)
 StepNam="Convert VCF to ANNOVAR input file using ANNOVAR"
-StepCmd="$NewAnnDir/convert2annovar.pl -includeinfo -allsample -withfreq -format vcf4 $VcfFil -outfile $TmpVar;
+OneSam=`grep -m 1 ^#CHROM $VcfFil | cut -f 10`
+StepCmd="vcftools --vcf $VcfFil --indv $OneSam --recode --out TEMP.$VcfFil;
+ convert2annovar.pl -includeinfo -allsample -withfreq -format vcf4 TEMP.$VcfFil.recode.vcf -outfile $TmpVar;
  cut -f 1-5,9-13 $TmpVar > $TmpVar.2;
  mv $TmpVar.2 $TmpVar"
 funcRunStep
+rm -f TEMP.$VcfFil.recode.vcf
 
 ##Generate Annotation table
 # A note regarding the annotation of multi-allelic variants: If annnovar uses "." as the NA string whilst building the annotation table (i.e. to indicate that there is no annotation for an allele), vcftools' vcf-annotate correctly ignores the annotation and adds nothing to the INFO field. For variants with multiple alternate alleles, we want to add a "." to the vcf INFO field to indicate missing data for those alternates where some alleles have annotation, i.e. e.g  "...;SIFTscr=1.234,.;..." to indicate a SIFT score for the first alternate allele and no annotation for the second. With a "." in the annovar table for the second allele we would just get "...;SIFTscr=1.234;...". Therefore we set the NA string to "%%%". The "%%%" string will be added to vcf by vcf-annotate ("...;SIFTscr=1.234,%%%;...") and then we can use sed to replace it with ".". The only problem then is that we would get "...;SIFTscr=.,.;..." for variants with no annotation at all and we don't want that, so an R script is used first to replace the "%%%" with "." in the annovar annotation table for variants where all alleles lack a particular annotation.
 StepNam="Build Annotation table using ANNOVAR"
-StepCmd="$NewAnnDir/table_annovar_cadd.pl $TmpVar $ANNHDB --buildver hg19 --remove -protocol refGene,esp6500si_all,esp6500si_aa,esp6500si_ea,1000g2014oct_all,1000g2014oct_eur,1000g2014oct_amr,1000g2014oct_eas,1000g2014oct_afr,1000g2014oct_sas,exac02,ljb26_all,caddgt10,genomicSuperDups -operation g,f,f,f,f,f,f,f,f,f,f,f,f,r -otherinfo  -nastring %%%  --outfile $AnnFil"
+StepCmd="table_annovar_cadd.pl $TmpVar $ANNHDB --buildver hg19 --remove -protocol refGene,esp6500si_all,esp6500si_aa,esp6500si_ea,1000g2014oct_all,1000g2014oct_eur,1000g2014oct_amr,1000g2014oct_eas,1000g2014oct_afr,1000g2014oct_sas,exac02,ljb26_all,caddgt10,genomicSuperDups -operation g,f,f,f,f,f,f,f,f,f,f,f,f,r -otherinfo  -nastring %%%  --outfile $AnnFil"
 if [[ "$FullCadd" == "true" ]]; then 
     StepCmd=${StepCmd/caddgt10/cadd}
     echo "  Using full CADD database..." >> $TmpLog
@@ -106,24 +108,18 @@ funcRunStep
 AnnFil=$AnnFil.hg19_multianno.txt
 
 ## Replace %%% in annotation table
-# A note regarding alternate allele column in multiallelic loci: Using convert to annovar with -withfreq leaves all of the alternate alleles in the ALT column (i.e. e.g. T,TGG,TGGG) in every line for the locus. vcftools needs to see the specific allele to which that line pertains in order to annotate the vcf properly, therefore we need to modify the ALT column
 StepNam="Fix annotation table"
 echo "options(stringsAsFactors=F)
 #read in header and body seperately and fix column headers for neatness
 dat <- read.table(file=\"$AnnFil\", skip=1, sep=\"\t\")
 hed <- read.table(file=\"$AnnFil\", nrows=1, sep=\"\t\")
 colnames(dat) <- c(hed[-length(hed)], \"CHROM\", \"POS\", \"ID\", \"REF\", \"ALT\")
-# find multiallelic loci and fix %%% where there is no data
-ind <- paste(dat[,\"CHROM\"], dat[,\"POS\"])
-dup <- unique(ind[duplicated(ind)])
-for(i in dup){
-  temp <- which(ind==i)
-  nodat <- which(apply(dat[temp,], 2, function(x){length(grep(\"%%%\", x))==length(x)}))
-  dat[temp,nodat] <- \".\"
-}
-und  <- which(!ind%in%dup)
-for(i in 1:ncol(dat)){
-  dat[und,i] <- gsub(\"%%%\", \".\", dat[und,i])
+# in each column replace %%% with . where there is no annotation for that locus
+ind <- paste(dat[,\"CHROM\"], dat[,\"POS\"]) #locus for each line
+for(i in 8:48) {
+  has.annot <- unique(ind[grep(\"%%%\", dat[,i], invert=T)]) #loci with some annotation in the column
+  no.annot <- which(!ind%in%has.annot) #all lines pertaining to loci with no annotation in the column
+  dat[no.annot,i] <- \".\"
 }
 write.table(dat, \"$AnnFil\", col.names=T, row.names=F, sep=\"\t\", quote=F)
 " > $AnnModRscript
@@ -179,9 +175,9 @@ VcfFil=$VcfFilAnn
 #for Function, gene name and Segmental duplications we only want to annotate per locus not per an allele so we make a separate table:
 StepNam="Make per locus annotation table"
 StepCmd="gunzip -c $AnnFil | cut -f 1,2,3,4,5,6,7,48-53 | head -n 1 > $AnnFil.bylocus ; 
-gunzip -c $AnnFil | cut -f 1,2,3,4,5,6,7,48-53 | tail -n +2 | sort -V | awk '!a[\$10]++' >> $AnnFil.bylocus ; 
+gunzip -c $AnnFil | cut -f 1,2,3,4,5,6,7,48-53 | tail -n +2 | awk '!a[\$10]++' >> $AnnFil.bylocus ; 
 bgzip $AnnFil.bylocus ;
-tabix -S 1 -s 1 -b 2 -e 3 $AnnFil.bylocus.gz"
+tabix -S 1 -s 9 -b 10 -e 10 $AnnFil.bylocus.gz"
 funcRunStep
 
 #Incorporate annovar annotations into vcf with vcftools

@@ -79,8 +79,8 @@ source $RefFil
 source $EXOMPPLN/exome.lib.sh #library functions begin "func"
 
 #set local variables
-echo "    InpFil: "$BamNam"    RefFil: "$RefFil"    TgtBed: "$TgtBed
 BamNam=`echo $InpFil | sed s/.bwamem.*//`
+echo "    InpFil: "$BamNam"    RefFil: "$RefFil"    TgtBed: "$TgtBed
 if [[ -z "$LogFil" ]]; then LogFil=$BamNam.BbB.log; fi # a name for the log file
 AlnFil=$BamNam.bwamem.bam #filename for bwa-mem aligned file
 SrtFil=$BamNam.bwamem.sorted.bam #output file for sorted bam

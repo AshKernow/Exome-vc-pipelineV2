@@ -98,14 +98,12 @@ StepName="Output flag stats using Samtools"
 StepCmd="samtools flagstat $MrgFil > $FlgStat"
 funcRunStep
 
-#copy the index for idxstat
 #get index stats
 StepName="Output idx stats using Samtools"
 StepCmd="samtools idxstats $MrgFil > $IdxStat"
 funcRunStep
 rm $MrgFil.bai
 
-#Call next steps of pipeline if requested
 #Call next steps of pipeline if requested
 NextJob="Run Genotype VCF"
 QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.2.HaplotypeCaller_GVCFmode.sh -i $MrgFil -r $RefFil -t $TgtBed -l $LogFil -P -B"

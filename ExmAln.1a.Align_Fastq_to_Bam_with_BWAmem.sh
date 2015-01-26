@@ -85,7 +85,7 @@ else
     fastq2=""
 fi
 rgheader=$(tail -n+$ArrNum $InpFil | head -n 1 | cut -f2) #RG header from second column
-BamNam=$(basename $fastq1 | sed s/_R1[[:print:]]*// | sed s/.fq.gz// | sed s/.fastq.gz//) # a name for the output files - basically the original file name
+BamNam=$(basename $fastq1 | sed s/_R1// | sed s/.fq.gz// | sed s/.fastq.gz//) # a name for the output files - basically the original file name
 if [[ -z "$LogFil" ]]; then LogFil=$BamNam.FqB.log; fi # a name for the log file
 AlnDir=wd.$BamNam.align; mkdir -p $AlnDir; cd $AlnDir # create working and move into a working directory
 AlnFil=$BamNam.bwamem.bam #filename for bwa-mem aligned file

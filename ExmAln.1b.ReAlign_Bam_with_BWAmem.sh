@@ -158,6 +158,14 @@ StepCmd="java -Xmx4G -Djava.io.tmpdir=$TmpDir -jar $PICARD/MarkDuplicates.jar
 funcRunStep
 rm $SrtFil ${SrtFil/bam/bai} #removed the "Sorted bam"
 
+#Call next steps of pipeline if requested
+NextJob="Run Genotype VCF"
+QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.2.HaplotypeCaller_GVCFmode.sh -i $DdpFil -r $RefFil -t $TgtBed -l $LogFil -B"
+funcPipeLine
+NextJob="Get basic bam metrics"
+QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.3a.Bam_metrics.sh -i $DdpFil -r $RefFil -l $LogFil"
+funcPipeLine
+
 #Get flagstat
 StepName="Output flag stats using Samtools"
 StepCmd="samtools flagstat $DdpFil > $FlgStat"
@@ -167,14 +175,6 @@ funcRunStep
 StepName="Output idx stats using Samtools"
 StepCmd="samtools idxstats $DdpFil > $IdxStat"
 funcRunStep
-
-#Call next steps of pipeline if requested
-NextJob="Run Local realignment"
-QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.2.HaplotypeCaller_GVCFmode.sh -i $DdpFil -r $RefFil -t $TgtBed -l $LogFil -P -B"
-funcPipeLine
-NextJob="Get basic bam metrics"
-QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.3a.Bam_metrics.sh -i $DdpFil -r $RefFil -l $LogFil"
-funcPipeLine
 
 #End Log
 funcWriteEndLog

@@ -32,19 +32,22 @@ usage="ExmVC.3.RecalibrateVariantQuality.sh -i <InputFile> -r <reference_file> -
      -r (required) - shell file containing variables with locations of reference files and resource directories
      -l (optional) - Log file
      -P (flag) - Call next step of exome analysis pipeline after completion of script
+     -X (flag) - Do not run Variant Quality Score Recalibration
      -B (flag) - Prevent GATK from phoning home
      -H (flag) - echo this message and exit
 "
 
+NoRecal="false"
+PipeLine="false"
 BadET="false"
 
-PipeLine="false"
-while getopts i:r:l:PBH opt; do
+while getopts i:r:l:PXBH opt; do
     case "$opt" in
         i) InpFil="$OPTARG";;
         r) RefFil="$OPTARG";; 
         l) LogFil="$OPTARG";;
         P) PipeLine="true";;
+        X) NoRecal="true";;
         B) BadET="true";;
         H) echo "$usage"; exit;;
   esac
@@ -101,7 +104,9 @@ StepCmd="java -Xmx9G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -rscriptFile $VcfNam.recalibrate_SNP_plots.R
  -log $GatkLog" #command to be run
 funcGatkAddArguments # Adds additional parameters to the GATK command depending on flags (e.g. -B or -F)
-funcRunStep
+if [[ "$NoRecal" == "false" ]]; then
+ funcRunStep
+fi
 
 ##Apply SNP recalibration
 StepName="Apply SNP recalibration with GATK ApplyRecalibration" # Description of this step - used in log
@@ -116,13 +121,16 @@ StepCmd="java -Xmx9G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -o $VcfNam.recal_snps.vcf
  -log $GatkLog" #command to be run
 funcGatkAddArguments # Adds additional parameters to the GATK command depending on flags (e.g. -B or -F)
-funcRunStep
-VcfFil=$VcfNam.recal_snps.vcf
+if [[ "$NoRecal" == "false" ]]; then 
+    funcRunStep
+    rm -f $VcfFil $VcfFil.idx
+    VcfFil=$VcfNam.recal_snps.vcf
+fi
 
 ##Build the InDel recalibration model
 StepName="Build the InDel recalibration model with GATK VariantRecalibrator" # Description of this step - used in log
 InfoFields="-an DP -an FS -an MQRankSum -an ReadPosRankSum"
-StepCmd="java -Xmx9G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
+StepCmd="java -/Xmx9G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -T VariantRecalibrator
  -R $REF
  -input $VcfFil
@@ -140,7 +148,7 @@ StepCmd="java -Xmx9G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -rscriptFile $VcfNam.recalibrate_INDEL_plots.R
  -log $GatkLog" #command to be run
 funcGatkAddArguments # Adds additional parameters to the GATK command depending on flags (e.g. -B or -F)
-funcRunStep
+if [[ "$NoRecal" == "false" ]]; then funcRunStep; fi
 
 ##Apply InDel recalibration
 StepName="Apply InDel recalibration with GATK ApplyRecalibration" # Description of this step - used in log
@@ -155,9 +163,12 @@ StepCmd="java -Xmx9G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -o $VcfNam.recalibrated.vcf
  -log $GatkLog" #command to be run
 funcGatkAddArguments # Adds additional parameters to the GATK command depending on flags (e.g. -B or -F)
-funcRunStep
-rm $VcfFil
-VcfFil=$VcfNam.recalibrated.vcf
+if [[ "$NoRecal" == "false" ]]; then 
+   funcRunStep
+   rm -f $VcfFil $VcfFil.idx
+   VcfFil=$VcfNam.recalibrated.vcf
+   rm -rf *INDEL* *SNP*
+fi
 
 #Apply Hard Filters to VCF
 StepName="Apply Hard Filters with GATK Variant Filtration" # Description of this step - used in log
@@ -189,11 +200,11 @@ StepCmd="java -Xmx9G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -log $GatkLog" #command to be run
 funcGatkAddArguments # Adds additional parameters to the GATK command depending on flags e.g. -B or -F
 funcRunStep
-rm $VcfFil
+rm $VcfFil $VcfFil.idx
 VcfFil=$VcfNam.hardfiltered.vcf
 
 #Get VCF stats with python script
-StepNam="Get VCF stats"
+StepName="Get VCF stats"
 StepCmd="python $EXOMPPLN/ExmPY.VCF_summary_Stats.py -v $VcfFil -o ${VcfFil/vcf/stats.tsv}"
 funcRunStep
 

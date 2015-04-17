@@ -39,16 +39,17 @@ usage="
      -l (optional) - Log file
      -j (optional) - number of jobs in array; normally this is derived automatically from the -t argument of qsub command; this can be used to rerun individual sections that failed
      -P (flag) - Call next step of exome analysis pipeline after completion of script
+     -X (flag) - Do not run Variant Quality Score Recalibration - only if calling pipeline
      -B (flag) - Prevent GATK from phoning home
      -H (flag) - echo this message and exit
 "
 
 AllowMisencoded="false"
 PipeLine="false"
+NoRecal="false"
 BadET="false"
 
-PipeLine="false"
-while getopts i:r:t:n:l:j:PBH opt; do
+while getopts i:r:t:n:l:j:PXBH opt; do
     case "$opt" in
         i) InpFil="$OPTARG";;
         r) RefFil="$OPTARG";;
@@ -57,13 +58,19 @@ while getopts i:r:t:n:l:j:PBH opt; do
         j) JobNum="$OPTARG";;
         l) LogFil="$OPTARG";;
         P) PipeLine="true";;
+        X) NoRecal="true";;
         B) BadET="true";;
         H) echo "$usage"; exit;;
   esac
 done
 
 #check all required paramaters present
-if [[ ! -e "$InpFil" ]] || [[ ! -e "$RefFil" ]] || [[ -z "$TgtBed" ]]; then echo "Missing/Incorrect required arguments"; echo "$usage"; exit; fi
+if [[ ! -e "$InpFil" ]] || [[ ! -e "$RefFil" ]] || [[ -z "$TgtBed" ]]; then
+ echo "Missing/Incorrect required arguments"
+ echo "provided arguments: -i $InpFil -r $RefFil -t $TgtBed"
+ echo "usage: $usage"
+ exit
+fi
 
 #Call the RefFil to load variables
 RefFil=`readlink -f $RefFil`
@@ -122,7 +129,7 @@ funcWriteStartLog
 echo "Target file line range: $SttLn - $(( $SttLn + $DivLen - 1 ))" >> $TmpLog
 
 ##Run Joint Variant Calling
-StepNam="Joint call gVCFs with GATK" >> $TmpLog
+StepName="Joint call gVCFs with GATK"
 StepCmd="java -Xmx12G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -T GenotypeGVCFs
  -R $REF
@@ -137,7 +144,7 @@ funcRunStep
 
 ##Annotate VCF with GATK
 infofields="-A AlleleBalance -A BaseQualityRankSumTest -A Coverage -A HaplotypeScore -A HomopolymerRun -A MappingQualityRankSumTest -A MappingQualityZero -A QualByDepth -A RMSMappingQuality -A SpanningDeletions -A FisherStrand -A InbreedingCoeff -A ClippingRankSumTest -A DepthPerSampleHC -A ChromosomeCounts -A GenotypeSummaries -A StrandOddsRatio"
-StepNam="Joint call gVCFs" >> $TmpLog
+StepName="Joint call gVCFs"
 StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -T VariantAnnotator 
  -R $REF
@@ -154,12 +161,14 @@ mv -f $VcfAnnFil $VcfFil
 ##Write completion log
 touch $PrgDir/$PrgFil
 
-#Need to wait for all UnifiedGenotyper jobs to finish and then remerge all the vcfs
-if [[ "$ArrNum" -eq 1 ]]; then
+#Need to wait for all HaplotypeCaller jobs to finish and then remerge all the vcfs
+if [[ $ArrNum -eq 1 ]]; then
     NextJob="Remerge vcf files"
-    QsubCmd="qsub -hold_jid $JOB_ID -o stdostde/ -e stdostde/ $EXOMPPLN/ExmVC.2.MergeVCF.sh -i $VcfDir -r $RefFil -l $LogFil -P -C"
-    if [[ "$AllowMisencoded" == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
+    QsubCmd="qsub -hold_jid $JOB_ID -o stdostde/ -e stdostde/ $EXOMPPLN/ExmVC.2.MergeVCF.sh -i $VcfDir -r $RefFil -l $LogFil -C"
+    if [[ "$PipeLine" == "true" ]]; then QsubCmd=$QsubCmd" -P"; fi
     if [[ "$BadET" == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi
+    if [[ "$NoRecal" == "true" ]]; then QsubCmd=$QsubCmd" -X"; fi
+    PipeLine="true" #set to true to always call the MergeVCF script
     funcPipeLine
 fi
 

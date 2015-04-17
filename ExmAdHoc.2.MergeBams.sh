@@ -71,6 +71,8 @@ echo $BamNam
 if [[ -z "$LogFil" ]]; then LogFil=$BamNam.MrgBam.log; fi # a name for the log file
 MrgDir=wd.$BamNam.merge # directory in which processing will be done
 MrgFil=$BamNam.merged.bam #filename for bwa-mem aligned file
+SrtFil=$BamNam.merged.sorted.bam #filename for bwa-mem aligned file
+DdpFil=$BamNam.merged.mkdup.bam #filename for bwa-mem aligned file
 FlgStat=$BamNam.merged.flagstat #output file for bam flag stats
 IdxStat=$BamNam.merged.idxstats #output file for bam index stats
 mkdir -p $MrgDir # create working directory
@@ -88,29 +90,43 @@ StepName="Merge with Samtools"
 StepCmd="samtools merge -b $InpFil $MrgFil" #commandtoberun
 funcRunStep
 
-#Index with samtools
-StepName="Index bam with Samtools"
-StepCmd="samtools index $MrgFil" #commandtoberun
+#Sort the bam file by coordinate
+StepName="Sort Bam using PICARD"
+StepCmd="java -Xmx4G -Djava.io.tmpdir=$TmpDir -jar $PICARD/SortSam.jar
+ INPUT=$MrgFil
+ OUTPUT=$SrtFil
+ SORT_ORDER=coordinate
+ CREATE_INDEX=TRUE"
 funcRunStep
+rm $MrgFil #removed the "Aligned bam"
+
+#Mark the duplicates
+StepName="Mark PCR Duplicates using PICARD"
+StepCmd="java -Xmx4G -Djava.io.tmpdir=$TmpDir -jar $PICARD/MarkDuplicates.jar
+ INPUT=$SrtFil
+ OUTPUT=$DdpFil
+ METRICS_FILE=$DdpFil.dup.metrics.txt
+ CREATE_INDEX=TRUE"
+funcRunStep
+rm $SrtFil ${SrtFil/bam/bai} #removed the "Sorted bam"
 
 #Get flagstat
 StepName="Output flag stats using Samtools"
-StepCmd="samtools flagstat $MrgFil > $FlgStat"
+StepCmd="samtools flagstat $DdpFil > $FlgStat"
 funcRunStep
 
 #get index stats
 StepName="Output idx stats using Samtools"
-StepCmd="samtools idxstats $MrgFil > $IdxStat"
+StepCmd="samtools idxstats $DdpFil > $IdxStat"
 funcRunStep
-rm $MrgFil.bai
 
 #Call next steps of pipeline if requested
 NextJob="Run Genotype VCF"
-QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.2.HaplotypeCaller_GVCFmode.sh -i $MrgFil -r $RefFil -t $TgtBed -l $LogFil -P -B"
+QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.2.HaplotypeCaller_GVCFmode.sh -i $DdpFil -r $RefFil -t $TgtBed -l $LogFil -P -B"
 funcPipeLine
 if [[ "$Metrix" == "true" ]]; then PipeLine="true"; fi #if the bam metrics were requested this will activate the next job
 NextJob="Get basic bam metrics"
-QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.3a.Bam_metrics.sh -i $MrgFil -r $RefFil -l $LogFil"
+QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.3a.Bam_metrics.sh -i $DdpFil -r $RefFil -l $LogFil"
 funcPipeLine
 
 #End Log

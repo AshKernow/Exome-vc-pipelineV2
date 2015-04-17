@@ -29,21 +29,24 @@ Z:\Exome_Seq\scripts\Exome_pipeline_scripts_GATKv3\ExmVC.2ug.MergeVCF.sh -i <Inp
      -l (optional) - Log file
      -C (flag)  - Check the directory of \"progess files\" - only used by pipeline to check that the all genotyping jobs completed successfully
      -P (flag) - Call next step of exome analysis pipeline after completion of script
+     -X (flag) - Do not run Variant Quality Score Recalibration - only if calling pipeline
      -B (flag) - Prevent GATK from phoning home - only if calling pipeline
      -H (flag) - echo this message and exit
 "
 
 ChecPrg="false"
 PipeLine="false"
+NoRecal="false"
 BadET="false"
 
-while getopts i:r:l:CPBH opt; do
+while getopts i:r:l:CPXBH opt; do
     case "$opt" in
         i) VcfDir="$OPTARG";;
         r) RefFil="$OPTARG";; 
         l) LogFil="$OPTARG";;
         C) ChecPrg="true";;
         P) PipeLine="true";;
+        X) NoRecal="true";;
         B) BadET="true";;
         H) echo "$usage"; exit;;
   esac
@@ -100,17 +103,18 @@ echo "Merging ... "$CountVCF" ... vcfs" >> $TmpLog
 StepCmd="vcf-concat -p $VcfDir/*vcf | vcf-sort -c > $VcfFil"
 funcRunStep
 
+#Create a list of sample names used in the vcf
+StepName="Output sample list"
+StepCmd="for i in \$(grep -m 1 ^#CHROM $VcfFil | cut -f 10-); do echo \$i >> $VcfNam.vcfheaderline.txt; done"
+funcRunStep
+
 #Call next job
 NextJob="Annotate with Annovar"
 QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmVC.3.AnnotateVCF.sh -i $VcfFil -r $RefFil -l $LogFil -P"
+if [[ "$BadET" == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi 
+if [[ "$NoRecal" == "true" ]]; then QsubCmd=$QsubCmd" -X"; fi
 funcPipeLine
-
-#NextJob="Recalibrate Variant Quality"
-#QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmVC.4.RecalibrateVariantQuality.sh -i $VcfFil -r $RefFil -l $LogFil -P"
-#if [[ "$AllowMisencoded" == "true" ]]; then QsubCmd=$QsubCmd" -A"; fi
-#if [[ "$BadET" == "true" ]]; then QsubCmd=$QsubCmd" -B"; fi 
-#funcPipeLine
 
 #End Log
 funcWriteEndLog
-#rm -r $VcfDir
+rm -r $VcfDir

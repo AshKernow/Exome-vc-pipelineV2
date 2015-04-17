@@ -21,6 +21,8 @@
 #list of required tools:
 # java <http://www.oracle.com/technetwork/java/javase/overview/index.html>
 # GATK <https://www.broadinstitute.org/gatk/> <https://www.broadinstitute.org/gatk/download>
+# bgzip 
+# tabix
 
 ## This file also requires exome.lib.sh - which contains various functions used throughout the Exome analysis scripts; this file should be in the same directory as this script
 
@@ -84,7 +86,7 @@ ProcessName="Genomic VCF generatation with GATK HaplotypeCaller" # Description o
 funcWriteStartLog
 
 ##Run genomic VCF generation
-StepNam="gVCF generation with GATK HaplotypeCaller"
+StepName="gVCF generation with GATK HaplotypeCaller"
 StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -T HaplotypeCaller
  -R $REF
@@ -105,6 +107,11 @@ StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  --filter_mismatching_base_and_quals
  -log $GatkLog" #command to be run
 funcGatkAddArguments # Adds additional parameters to the GATK command depending on flags (e.g. -B or -F)
+funcRunStep
+
+##gzip and index the gVCF
+StepName="gzip and index the gVCF"
+StepCmd"bgzip $VcfFil; tabix -f -p vcf $VcfFil.gz"
 funcRunStep
 
 #End Log

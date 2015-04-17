@@ -118,7 +118,7 @@ if [[ $RgHeader == "" ]]; then #check that we have a  RG header and if not write
     exit 1
 fi
 #check for multiple readgroups and split if necessary
-if [[ $SplitReads == "false" ]]; then     
+if [[ $SplitReads == "false" ]]; then
     NumOfRG=$(samtools view -H $BamFil | grep ^@RG | wc -l)
     if [[ $NumOfRG -gt 1 ]]; then 
         echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" >> $TmpLog
@@ -127,18 +127,18 @@ if [[ $SplitReads == "false" ]]; then
         echo >> $TmpLog
         echo "They will be processed separately and remerged....">> $TmpLog
         cd ../ #move back out of working directory
-	mkdir -p stdostde
+        mkdir -p stdostde
         QsubCmd="qsub -t 1-$NumOfRG -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.1b.ReAlign_Bam_with_BWAmem.sh -i $BamFil -r $RefFil -l $LogFil -S"
-	if [[ $TgtBed ]]; then QsubCmd=$QsubCmd" -t $TgtBed"; fi 
-	if [[ "$FixMisencoded" == "true" ]]; then QsubCmd=$QsubCmd" -F"; fi
+    if [[ $TgtBed ]]; then QsubCmd=$QsubCmd" -t $TgtBed"; fi 
+    if [[ "$FixMisencoded" == "true" ]]; then QsubCmd=$QsubCmd" -F"; fi
         if [[ "$PipeLine" == "true" ]]; then QsubCmd=$QsubCmd" -P"; fi
         PipeLine="true"
-	LogFil=$AlnDir/$LogFil
-	TmpLog=$AlnDir/$TmpLog
-	TmpDir=$AlnDir/$TmpDir
-	funcPipeLine
-	#End Log
-	funcWriteEndLog
+    LogFil=$AlnDir/$LogFil
+    TmpLog=$AlnDir/$TmpLog
+    TmpDir=$AlnDir/$TmpDir
+    funcPipeLine
+    #End Log
+    funcWriteEndLog
         exit 0
     fi
 else
@@ -154,7 +154,7 @@ else
     IdxStat=$BamNam.RGID_$RGID.idxstats #output file for bam index stats
     if [[ $ArrNum -eq 1 ]]; then
         echo "Job 1, creating mergelist and sending merge command with hold."  >> $TmpLog
-        samtools view -H $BamFil | grep ^@RG | sed "s/.*\<ID:/$BamNam.RGID_/" | sed -e 's/\s\+.*/.bwamem.mkdup.bam/' > $RgIdLst
+        samtools view -H $BamFil | grep ^@RG | sed "s/.*\<ID:/$BamNam.RGID_/" | sed -e 's/\s\+.*/.bwamem.mkdup.bam/' | awk -v PWD=$PWD '{ print PWD"/"$0 }' > $RgIdLst
         QsubCmd="qsub -hold_jid $JOB_ID -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAdHoc.2.MergeBams.sh -i $RgIdLst -r $RefFil -t $TgtBed -l $LogFil"
         if [[ "$PipeLine" == "true" ]]; then 
             QsubCmd=$QsubCmd" -P"
@@ -209,23 +209,26 @@ StepCmd="java -Xmx4G -Djava.io.tmpdir=$TmpDir -jar $PICARD/MarkDuplicates.jar
 funcRunStep
 rm $SrtFil ${SrtFil/bam/bai} #removed the "Sorted bam"
 
-#Call next steps of pipeline if requested
-NextJob="Run Genotype VCF"
-QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.2.HaplotypeCaller_GVCFmode.sh -i $DdpFil -r $RefFil -t $TgtBed -l $LogFil -B"
-funcPipeLine
-NextJob="Get basic bam metrics"
-QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.3a.Bam_metrics.sh -i $DdpFil -r $RefFil -l $LogFil"
-funcPipeLine
 
-#Get flagstat
-StepName="Output flag stats using Samtools"
-StepCmd="samtools flagstat $DdpFil > $FlgStat"
-funcRunStep
+if [[ $SplitReads == "false" ]]; then
+    #Call next steps of pipeline if requested
+    NextJob="Run Genotype VCF"
+    QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.2.HaplotypeCaller_GVCFmode.sh -i $DdpFil -r $RefFil -t $TgtBed -l $LogFil -B"
+    funcPipeLine
+    NextJob="Get basic bam metrics"
+    QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.3a.Bam_metrics.sh -i $DdpFil -r $RefFil -l $LogFil"
+    funcPipeLine
 
-#get index stats
-StepName="Output idx stats using Samtools"
-StepCmd="samtools idxstats $DdpFil > $IdxStat"
-funcRunStep
+    #Get flagstat
+    StepName="Output flag stats using Samtools"
+    StepCmd="samtools flagstat $DdpFil > $FlgStat"
+    funcRunStep
+
+    #get index stats
+    StepName="Output idx stats using Samtools"
+    StepCmd="samtools idxstats $DdpFil > $IdxStat"
+    funcRunStep
+fi
 
 #End Log
 funcWriteEndLog

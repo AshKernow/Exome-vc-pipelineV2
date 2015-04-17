@@ -34,12 +34,10 @@ usage="
      -t (required) - Exome capture kit targets bed file (must end .bed for GATK compatability)
      -l (optional) - Log file
      -B (flag) - Prevent GATK from phoning home
-     -F (flag) - Fix mis-encoded base quality scores - see GATK manual
      -H (flag) - echo this message and exit
 "
 
 BadEt="false"
-FixMisencoded="false"
 
 #get arguments
 while getopts i:r:t:l:FBH opt; do
@@ -48,8 +46,8 @@ while getopts i:r:t:l:FBH opt; do
         r) RefFil="$OPTARG";; 
         t) TgtBed="$OPTARG";; 
         l) LogFil="$OPTARG";;
-        F) FixMisencoded="true";;
         B) BadET="true";;
+	F) FixMisencoded="true";;
         H) echo "$usage"; exit;;
     esac
 done
@@ -102,4 +100,4 @@ funcRunStep
 funcWriteEndLog
 
 #CleanUp
-#rm -rf $BamNam.DoC
+rm -rf $BamNam.DoC

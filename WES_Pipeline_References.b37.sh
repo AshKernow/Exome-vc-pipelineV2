@@ -7,7 +7,6 @@ GATKJAR="/ifs/scratch/c2b2/af_lab/ads2202/jar/GenomeAnalysisTK_Current/GenomeAna
 PICARD="/ifs/scratch/c2b2/af_lab/ads2202/jar/picard-tools/" #directory containing Picard jar files
 SNPEFF="/ifs/scratch/c2b2/af_lab/ads2202/jar/snpEff/snpEff.jar" # Current snpEff jar file
 
-
 ## References
 export BUILD="b37" # shorthand for build
 export DBSNP="$EXOMRES/b37/dbsnp_137.b37.vcf" # dbSNP vcf from GATK

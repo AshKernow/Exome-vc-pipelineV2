@@ -66,7 +66,6 @@ source $RefFil
 #Load script library
 source $EXOMPPLN/exome.lib.sh #library functions begin "func" #library functions begin "func"
 
-
 #Set local Variables
 funcGetTargetFile #If the target file has been specified using a code, get the full path from the exported variable
 ArrNum=$SGE_TASK_ID
@@ -111,7 +110,7 @@ funcRunStep
 
 ##gzip and index the gVCF
 StepName="gzip and index the gVCF"
-StepCmd"bgzip $VcfFil; tabix -f -p vcf $VcfFil.gz"
+StepCmd="bgzip $VcfFil; tabix -f -p vcf $VcfFil.gz"
 funcRunStep
 
 #End Log

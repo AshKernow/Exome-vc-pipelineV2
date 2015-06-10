@@ -33,21 +33,23 @@ usage="
      -r (required) - shell file containing variables with locations of reference files and resource directories
      -t (required) - Exome capture kit targets bed file (must end .bed for GATK compatability)
      -l (optional) - Log file
+     -C (flag) - Allow BadCigar - see GATK documentation - allows reads that GATK interprets as indicating a malformed file, e.g. reads starting with a deletion
      -B (flag) - Prevent GATK from phoning home
      -H (flag) - echo this message and exit
 "
 
+BadCigar="false"
 BadEt="false"
 
 #get arguments
-while getopts i:r:t:l:FBH opt; do
+while getopts i:r:t:l:CBH opt; do
     case "$opt" in
         i) InpFil="$OPTARG";;
         r) RefFil="$OPTARG";; 
         t) TgtBed="$OPTARG";; 
         l) LogFil="$OPTARG";;
+        C) BadCigar="true";;
         B) BadET="true";;
-	F) FixMisencoded="true";;
         H) echo "$usage"; exit;;
     esac
 done

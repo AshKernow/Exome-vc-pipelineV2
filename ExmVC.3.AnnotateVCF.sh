@@ -102,7 +102,7 @@ rm -f TEMP.$VcfFil.recode.vcf
 ##Generate Annotation table
 # A note regarding the annotation of multi-allelic variants: If annnovar uses "." as the NA string whilst building the annotation table (i.e. to indicate that there is no annotation for an allele), vcftools' vcf-annotate correctly ignores the annotation and adds nothing to the INFO field. For variants with multiple alternate alleles, we want to add a "." to the vcf INFO field to indicate missing data for those alternates where some alleles have annotation, i.e. e.g  "...;SIFTscr=1.234,.;..." to indicate a SIFT score for the first alternate allele and no annotation for the second. With a "." in the annovar table for the second allele we would just get "...;SIFTscr=1.234;...". Therefore we set the NA string to "%%%". The "%%%" string will be added to vcf by vcf-annotate ("...;SIFTscr=1.234,%%%;...") and then we can use sed to replace it with ".". The only problem then is that we would get "...;SIFTscr=.,.;..." for variants with no annotation at all and we don't want that, so an R script is used first to replace the "%%%" with "." in the annovar annotation table for variants where all alleles lack a particular annotation.
 StepName="Build Annotation table using ANNOVAR"
-StepCmd="table_annovar_cadd.pl $TmpVar $ANNHDB --buildver hg19 --remove -protocol refGene,esp6500si_all,esp6500si_aa,esp6500si_ea,1000g2014oct_all,1000g2014oct_eur,1000g2014oct_amr,1000g2014oct_eas,1000g2014oct_afr,1000g2014oct_sas,exac03,ljb26_all,caddgt10,genomicSuperDups -operation g,f,f,f,f,f,f,f,f,f,f,f,f,r -otherinfo  -nastring %%%  --outfile $AnnFil"
+StepCmd="table_annovar.pl $TmpVar $ANNHDB --buildver hg19 --remove -protocol refGene,esp6500siv2_all,esp6500siv2_aa,esp6500siv2_ea,1000g2014oct_all,1000g2014oct_eur,1000g2014oct_amr,1000g2014oct_eas,1000g2014oct_afr,1000g2014oct_sas,exac03,ljb26_all,caddgt10,caddindel,genomicSuperDups -operation g,f,f,f,f,f,f,f,f,f,f,f,f,f,r -otherinfo  -nastring %%%  --outfile $AnnFil"
 if [[ "$FullCadd" == "true" ]]; then 
     StepCmd=${StepCmd/caddgt10/cadd}
     echo "  Using full CADD database..." >> $TmpLog
@@ -120,7 +120,7 @@ hed <- read.table(file=\"$AnnFil\", nrows=1, sep=\"\t\")
 colnames(dat) <- c(hed[-length(hed)], \"CHROM\", \"POS\", \"ID\", \"REF\", \"ALT\")
 # in each column replace %%% with . where there is no annotation for that locus
 ind <- paste(dat[,\"CHROM\"], dat[,\"POS\"]) #locus for each line
-for(i in 8:48) {
+for(i in 8:(ncol(dat)-5)) {
   has.annot <- unique(ind[grep(\"%%%\", dat[,i], invert=T)]) #loci with some annotation in the column
   no.annot <- which(!ind%in%has.annot) #all lines pertaining to loci with no annotation in the column
   dat[no.annot,i] <- \".\"
@@ -139,14 +139,14 @@ StepCmd="head -n 1 $AnnFil > $AnnFil.tempheader;
 tail -n+2 $AnnFil | awk '{gsub( / /, \"\"); print}' | awk '{gsub( /;/, \",\"); print}' | awk '{gsub( /=/, \":\"); print}' >> $AnnFil.tempheader; 
 mv $AnnFil.tempheader $AnnFil; 
 bgzip $AnnFil; 
-tabix -S 1 -s 49 -b 50 -e 50 $AnnFil.gz"
+tabix -S 1 -s 58 -b 59 -e 59 $AnnFil.gz"
 funcRunStep
 
 
 #Incorporate annovar annotations into vcf with vcftools
 StepName="Incorporate annovar annotations into vcf with vcftools"
 StepCmd="cat $InpFil | vcf-annotate -a $AnnFil.gz 
- -c -,-,-,-,-,-,-,-,INFO/VarClass,INFO/AAChange,INFO/ESPfreq,INFO/ESP.aa.freq,INFO/ESP.ea.freq,INFO/1KGfreq,INFO/1KG.eur.freq,INFO/1KG.amr.freq,INFO/1KG.eas.freq,INFO/1KG.afr.freq,INFO/1KG.sas.freq,INFO/ExACfreq,INFO/SIFTscr,INFO/SIFTprd,INFO/PP2.hdiv.scr,INFO/PP2.hdiv.prd,INFO/PP2.hvar.scr,INFO/PP2.hvar.prd,-,-,INFO/MutTscr,INFO/MutTprd,INFO/MutAscr,INFO/MutAprd,-,-,INFO/MetaSVMscr,INFO/MetaSVMprd,-,-,-,-,-,INFO/GERP,-,INFO/PhyloP,INFO/SiPhy,INFO/CADDraw,INFO/CADDphred,-,CHROM,POS,-,REF,ALT
+ -c -,-,-,-,-,-,-,-,INFO/VarClass,INFO/AAChange,INFO/ESPfreq,INFO/ESP.aa.freq,INFO/ESP.ea.freq,INFO/1KGfreq,INFO/1KG.eur.freq,INFO/1KG.amr.freq,INFO/1KG.eas.freq,INFO/1KG.afr.freq,INFO/1KG.sas.freq,INFO/ExACfreq,INFO/ExAC.afr.freq,INFO/ExAC.amr.freq,INFO/ExAC.eas.freq,INFO/ExAC.fin.freq,INFO/ExAC.nfe.freq,INFO/ExAC.oth.freq,INFO/ExAC.sas.freq,INFO/SIFTscr,INFO/SIFTprd,INFO/PP2.hdiv.scr,INFO/PP2.hdiv.prd,INFO/PP2.hvar.scr,INFO/PP2.hvar.prd,-,-,INFO/MutTscr,INFO/MutTprd,INFO/MutAscr,INFO/MutAprd,-,-,INFO/MetaSVMscr,INFO/MetaSVMprd,-,-,-,-,-,INFO/GERP,-,INFO/PhyloP,INFO/SiPhy,INFO/CADDraw,INFO/CADDphred,INFO/CADDInDelraw,INFO/CADDInDelphred,-,CHROM,POS,-,REF,ALT
  -d key=INFO,ID=VarClass,Number=1,Type=String,Description='Mutational Class'
  -d key=INFO,ID=AAChange,Number=1,Type=String,Description='Amino Acid change'
  -d key=INFO,ID=ESPfreq,Number=1,Type=Float,Description='Exome Sequencing Project 6500 alternative allele frequency'
@@ -159,6 +159,14 @@ StepCmd="cat $InpFil | vcf-annotate -a $AnnFil.gz
  -d key=INFO,ID=1KG.afr.freq,Number=1,Type=Float,Description='1000 genome alternative allele frequency - African'
  -d key=INFO,ID=1KG.sas.freq,Number=1,Type=Float,Description='1000 genome alternative allele frequency - South Asian'
  -d key=INFO,ID=ExACfreq,Number=1,Type=Float,Description='Exome Aggregatation Consortium alternative allele frequency - all populations'
+ -d key=INFO,ID=ExACfreq,Number=1,Type=Float,Description='Exome Aggregatation Consortium alternative allele frequency - all populations'
+ -d key=INFO,ID=ExAC.afr.freq,Number=1,Type=Float,Description='Exome Aggregatation Consortium alternative allele frequency - African'
+ -d key=INFO,ID=ExAC.amr.freq,Number=1,Type=Float,Description='Exome Aggregatation Consortium alternative allele frequency - Latino'
+ -d key=INFO,ID=ExAC.eas.freq,Number=1,Type=Float,Description='Exome Aggregatation Consortium alternative allele frequency - East Asian'
+ -d key=INFO,ID=ExAC.fin.freq,Number=1,Type=Float,Description='Exome Aggregatation Consortium alternative allele frequency - European (Finnish)'
+ -d key=INFO,ID=ExAC.nfe.freq,Number=1,Type=Float,Description='Exome Aggregatation Consortium alternative allele frequency - European (Non-Finnish)'
+ -d key=INFO,ID=ExAC.oth.freq,Number=1,Type=Float,Description='Exome Aggregatation Consortium alternative allele frequency - Other'
+ -d key=INFO,ID=ExAC.sas.freq,Number=1,Type=Float,Description='Exome Aggregatation Consortium alternative allele frequency - South Asian'
  -d key=INFO,ID=SIFTscr,Number=1,Type=Float,Description='SIFT score'
  -d key=INFO,ID=SIFTprd,Number=1,Type=String,Description='SIFT prediction'
  -d key=INFO,ID=PP2.hdiv.scr,Number=1,Type=Float,Description='PolyPhen2 HDIV score'
@@ -175,14 +183,16 @@ StepCmd="cat $InpFil | vcf-annotate -a $AnnFil.gz
  -d key=INFO,ID=PhyloP,Number=1,Type=Float,Description='PhyloP score'
  -d key=INFO,ID=SiPhy,Number=1,Type=Float,Description='SiPhy scores'
  -d key=INFO,ID=CADDraw,Number=1,Type=Float,Description='Whole-genome raw CADD score'
- -d key=INFO,ID=CADDphred,Number=1,Type=Float,Description='Whole-genome phred-scaled CADD score' > $VcfFilAnn"
+ -d key=INFO,ID=CADDphred,Number=1,Type=Float,Description='Whole-genome phred-scaled CADD score'
+ -d key=INFO,ID=CADDInDelraw,Number=1,Type=Float,Description='Whole-genome raw CADD InDel score'
+ -d key=INFO,ID=CADDInDelphred,Number=1,Type=Float,Description='Whole-genome phred-scaled CADD InDel score' > $VcfFilAnn"
 funcRunStep
 VcfFil=$VcfFilAnn
 
 #for Function, gene name and Segmental duplications we only want to annotate per locus not per an allele so we make a separate table:
 StepName="Make per locus annotation table"
-StepCmd="gunzip -c $AnnFil | cut -f 1,2,3,4,5,6,7,48-53 | head -n 1 > $AnnFil.bylocus ; 
-gunzip -c $AnnFil | cut -f 1,2,3,4,5,6,7,48-53 | tail -n +2 | awk '!a[\$10]++' >> $AnnFil.bylocus ; 
+StepCmd="gunzip -c $AnnFil | cut -f 1,2,3,4,5,6,7,57-62 | head -n 1 > $AnnFil.bylocus ; 
+gunzip -c $AnnFil | cut -f 1,2,3,4,5,6,7,57-62 | tail -n +2 | awk '!a[\$9\$10]++' >> $AnnFil.bylocus ; 
 bgzip $AnnFil.bylocus ;
 tabix -S 1 -s 9 -b 10 -e 10 $AnnFil.bylocus.gz"
 funcRunStep

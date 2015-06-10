@@ -32,7 +32,7 @@ while getopts i:o:SH opt; do
 done
 
 #some variables
-ExmPpln=/ifs/scratch/c2b2/af_lab/ads2202/Exome_Seq/scripts/Exome_pipeline_scripts_GATKv3
+EXOMFILT=/ifs/scratch/c2b2/af_lab/ads2202/Exome_Seq/scripts/Filtering_scripts
 HapMapDir=/ifs/scratch/c2b2/af_lab/ads2202/Exome_Seq/resources/hapmap3_pop/
 source ~/.bash_profile
 if [[ -z "$OutNam" ]];then OutNam=`basename $InpFil`; OutNam=${OutNam/.bed/}; OutNam=${OutNam/.vcf/}; fi # a name for the output files
@@ -42,15 +42,20 @@ if [[ "${InpFil##*.}" != "bed" ]]; then
     VcfFil=`readlink -f $InpFil`
     BbfNam=$OutNam
     #filter the VCF for common variants for 1KG and GO-ESP and within cohort alternate allele frequency > 0.05
-    $ExmPpln/ExmFilt.1.FilterbyAlleleFrequency.py -v $VcfFil -o $BbfNam --maf 0.05 -G -W
+    $EXOMFILT/ExmFilt.1.FilterbyAlleleFrequency.py -v $VcfFil -o $BbfNam --maf 0.05 -G -W
     VcfFil=$BbfNam.filter.aaf.vcf
     # convert vcf --> plink using vcftools and change -9 in the fam to 2
     vcftools --vcf $VcfFil --plink --out $BbfNam
-    plink --file $BbfNam --make-bed --noweb --out $BbfNam
+    plink --file $BbfNam --make-bed --out $BbfNam
+    echo
+    echo "------------------------------------------------------------------------"
+    echo
     awk '{ gsub( /-9$/, "2"); print }' $BbfNam.fam > $BbfNam.fam.temp; mv $BbfNam.fam.temp $BbfNam.fam
 else
     BbfNam=`readlink -f $InpFil`
     BbfNam=${BbfNam/.bed/}
+    awk '{ gsub( /-9$/, "2"); print }' $BbfNam.fam > $BbfNam.fam.temp
+    mv $BbfNam.fam.temp $BbfNam.fam
 fi
 
 # Get HapMap data unless excepted
@@ -61,37 +66,55 @@ if [[ "$SamOnly" == "false" ]]; then
 
 
     for i in $(find $HapMapDir | grep bed); do
-    HapFil=${i/.bed/}
-    HapTmp=${HapFil#*.}
-    HapTmp=HAPMAPTEMP_${HapTmp%%.*}
-    plink --bfile $HapFil --extract $SnpList --make-bed --noweb --out $HapTmp
-    HapLast=$HapTmp
+        HapFil=${i/.bed/}
+        HapTmp=${HapFil#*.}
+        HapTmp=HAPMAPTEMP_${HapTmp%%.*}
+        plink --bfile $HapFil --extract $SnpList --make-bed --noweb --out $HapTmp
+        echo
+        echo "------------------------------------------------------------------------"
+        echo
     done
 
-    ls | grep -E "HAPMAPTEMP.+[dm]$" | grep -v $HapLast | paste - - - > HapMap_merge-list.list
+    ls | grep -E "HAPMAPTEMP.+[dm]$" | paste - - - > HapMap_merge-list.list
 
     HapMapDat=$OutNam"_HapMapData"
-    plink --bfile $HapLast --merge-list HapMap_merge-list.list --make-bed --noweb --out $HapMapDat
-
+    plink --merge-list HapMap_merge-list.list --make-bed --noweb --out $HapMapDat
+    echo
+    echo "------------------------------------------------------------------------"
+    echo
+    
     rm -f *HAPMAPTEMP*
 
     #HapMap data is b36 so update map before merging
     cut -f 2,4 $BbfNam.bim > update_map.tab
     plink --bfile $HapMapDat --update-map update_map.tab --make-bed --noweb --out $HapMapDat
-
+    echo
+    echo "------------------------------------------------------------------------"
+    echo
+    
     #change -9 in fam to 1 
-    awk '{ gsub( /-9$/, "1"); print }' $HapMapDat.fam > $HapMapDat.fam.temp; mv $HapMapDat.fam.temp $HapMapDat.fam
+    awk '{ gsub( /-9$/, "1"); print }' $HapMapDat.fam > $HapMapDat.fam.temp
+    mv $HapMapDat.fam.temp $HapMapDat.fam
 
 
     # Merge data:
     EigDat=Combined_data_for_eigenstrat
     plink --bfile $BbfNam --bmerge $HapMapDat.bed $HapMapDat.bim $HapMapDat.fam --geno 0.05 --make-bed --noweb --out $EigDat
-
+    echo
+    echo "------------------------------------------------------------------------"
+    echo
+    
     #check for mismatched snps and exclude and remerge if necessary
 
-    if [[ -e $EigDat.missnp ]]; then
-        plink --bfile $HapMapDat --exclude $EigDat.missnp --make-bed --noweb --out $HapMapDat
-        plink --bfile $BbfNam --bmerge $HapMapDat.bed $HapMapDat.bim $HapMapDat.fam --exclude $EigDat.missnp --geno 0.05 --make-bed --noweb --out $EigDat
+    if [[ -e $EigDat-merge.missnp ]]; then
+        echo
+        echo "------------------------------------------------------------------------"
+        echo
+        plink --bfile $HapMapDat --exclude $EigDat-merge.missnp --make-bed --noweb --out $HapMapDat
+        echo
+        echo "------------------------------------------------------------------------"
+        echo
+        plink --bfile $BbfNam --bmerge $HapMapDat.bed $HapMapDat.bim $HapMapDat.fam --exclude $EigDat-merge.missnp --geno 0.05 --make-bed --noweb --out $EigDat
     fi
 else
     EigDat=$BbfNam
@@ -114,4 +137,4 @@ convertf -p par.BBF.EIGENSTRAT
 
 # run EigenStrat
 
-perl ~/scratch/src/EIG5.0.1/bin/smartpca.perl -i $OutNam.plus.HapMap.eigenstratgeno -a $OutNam.plus.HapMap.snp -b $OutNam.plus.HapMap.ind -k 10 -o $OutNam.plus.HapMap.pca -p $OutNam.plus.HapMap.plot -e $OutNam.plus.HapMap.eval -l $OutNam.plus.HapMap.log -m 5 -t 2 -s 6.0
+perl /ifs/home/c2b2/af_lab/ads2202/scratch/bin/eigenstrat/bin/smartpca.perl -i $OutNam.eigenstratgeno -a $OutNam.snp -b $OutNam.ind -k 10 -o $OutNam.plus.HapMap.pca -p $OutNam.plus.HapMap.plot -e $OutNam.plus.HapMap.eval -l $OutNam.plus.HapMap.log -m 5 -t 2 -s 6.0

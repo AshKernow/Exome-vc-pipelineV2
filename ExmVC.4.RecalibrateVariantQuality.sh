@@ -130,7 +130,7 @@ fi
 ##Build the InDel recalibration model
 StepName="Build the InDel recalibration model with GATK VariantRecalibrator" # Description of this step - used in log
 InfoFields="-an DP -an FS -an MQRankSum -an ReadPosRankSum"
-StepCmd="java -/Xmx9G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
+StepCmd="java -Xmx9G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -T VariantRecalibrator
  -R $REF
  -input $VcfFil
@@ -178,8 +178,8 @@ StepCmd="java -Xmx9G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  --variant $VcfFil
  -o $VcfNam.hardfiltered.vcf
  --clusterWindowSize -1
- --filterExpression \"QUAL<30.0||QD<2.0\"
- --filterName \"StandardFilters\"
+ --filterExpression \"QUAL<30.0\"
+ --filterName \"LowQuality\"
  --filterExpression \"MQ0>=4&&(MQ0/DP)>0.1\"
  --filterName \"HARD_TO_VALIDATE\"
  --filterExpression \"FS>=45.0\"

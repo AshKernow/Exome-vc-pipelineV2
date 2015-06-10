@@ -114,6 +114,7 @@ VcfNam=$VcfNam.$ArrNum
 PrgFil=$VcfNam.genotypingcomplete
 VcfFil=$VcfDir/$VcfNam.vcf #Output File
 VcfAnnFil=$VcfDir/$VcfNam.ann.vcf
+VcfLeftAlnFil=$VcfDir/$VcfNam.LA.vcf
 GatkLog=$VcfNam.GgVCF.gatklog #a log for GATK to output to, this is then trimmed and added to the script log
 TmpLog=$VcfNam.GgVCF.temp.log #temporary log file
 TmpDir=$VcfNam.GgVCF.tempdir; mkdir -p $TmpDir #temporary directory
@@ -157,6 +158,19 @@ StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
 funcGatkAddArguments # Adds additional parameters to the GATK command depending on flags (e.g. -B or -F)
 funcRunStep
 mv -f $VcfAnnFil $VcfFil
+
+##Left Align variants
+StepName="Left align variants in the VCF with GATK"
+StepCmd="java -Xmx4G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
+ -T LeftAlignAndTrimVariants
+ -R $REF
+ -V $VcfFil
+ -o $VcfLeftAlnFil
+ -log $GatkLog" #command to be run
+funcGatkAddArguments # Adds additional parameters to the GATK command depending on flags (e.g. -B or -F)
+funcRunStep
+mv -f $VcfLeftAlnFil $VcfFil
+
 
 ##Write completion log
 touch $PrgDir/$PrgFil

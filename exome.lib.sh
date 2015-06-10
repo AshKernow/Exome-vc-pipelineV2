@@ -105,6 +105,7 @@ rm -r $TmpLog $TmpDir
 funcGatkAddArguments (){
 if [[ "$AllowMisencoded" == "true" ]]; then StepCmd=$StepCmd" -allowPotentiallyMisencodedQuals"; fi
 if [[ "$FixMisencoded" == "true" ]]; then StepCmd=$StepCmd" -fixMisencodedQuals"; fi
+if [[ "$BadCigar" == "true" ]]; then StepCmd=$StepCmd" -rf BadCigar"; fi
 if [[ "$BadET" == "true" ]]; then StepCmd=$StepCmd" -et NO_ET -K $ETKEY"; fi
 }
 

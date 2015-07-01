@@ -131,10 +131,11 @@ echo "Target file line range: $SttLn - $(( $SttLn + $DivLen - 1 ))" >> $TmpLog
 
 ##Run Joint Variant Calling
 StepName="Joint call gVCFs with GATK"
-StepCmd="java -Xmx12G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
+StepCmd="java -Xmx20G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -T GenotypeGVCFs
  -R $REF
  -L $TgtFil
+ --interval_padding 100
  -V $InpFil
  -o $VcfFil
  -D $DBSNP

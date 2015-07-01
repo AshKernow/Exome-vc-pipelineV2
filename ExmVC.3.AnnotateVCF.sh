@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -cwd -l mem=8G,time=12:: -N AnnVCF
+#$ -cwd -l mem=8G,time=6:: -N AnnVCF
 
 
 #This script takes a bam file or a list of bam files (filename must end ".list") and runs variant calling using the HaplotypeCaller in gVCF mode
@@ -123,7 +123,8 @@ ind <- paste(dat[,\"CHROM\"], dat[,\"POS\"]) #locus for each line
 for(i in 8:(ncol(dat)-5)) {
   has.annot <- unique(ind[grep(\"%%%\", dat[,i], invert=T)]) #loci with some annotation in the column
   no.annot <- which(!ind%in%has.annot) #all lines pertaining to loci with no annotation in the column
-  dat[no.annot,i] <- \".\"
+  if(length(no.annot)>0) { dat[no.annot,i] <- \".\" }
+  if(length(has.annot)>0) { dat[ind%in%has.annot,i] <- gsub(\"^\\\\.\$\", \"%%%\", dat[ind%in%has.annot,i]) }
 }
 write.table(dat, \"$AnnFil\", col.names=T, row.names=F, sep=\"\t\", quote=F)
 " > $AnnModRscript

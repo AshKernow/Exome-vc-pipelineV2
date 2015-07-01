@@ -33,8 +33,9 @@ done
 
 #some variables
 EXOMFILT=/ifs/scratch/c2b2/af_lab/ads2202/Exome_Seq/scripts/Filtering_scripts
-HapMapDir=/ifs/scratch/c2b2/af_lab/ads2202/Exome_Seq/resources/hapmap3_pop/
-source ~/.bash_profile
+HapMapDir=/ifs/scratch/c2b2/af_lab/ads2202/Exome_Seq/resources/hapmap3_pop/hg19
+
+InpFil=`readlink -f $InpFil`
 if [[ -z "$OutNam" ]];then OutNam=`basename $InpFil`; OutNam=${OutNam/.bed/}; OutNam=${OutNam/.vcf/}; fi # a name for the output files
 
 #check for vcf, if vcf convert to plink format
@@ -44,13 +45,35 @@ if [[ "${InpFil##*.}" != "bed" ]]; then
     #filter the VCF for common variants for 1KG and GO-ESP and within cohort alternate allele frequency > 0.05
     $EXOMFILT/ExmFilt.1.FilterbyAlleleFrequency.py -v $VcfFil -o $BbfNam --maf 0.05 -G -W
     VcfFil=$BbfNam.filter.aaf.vcf
-    # convert vcf --> plink using vcftools and change -9 in the fam to 2
-    vcftools --vcf $VcfFil --plink --out $BbfNam
-    plink --file $BbfNam --make-bed --out $BbfNam
+    # convert vcf --> plink using vcftools; if there are more than 1000 samples in the vcf vcftools cannot generate the necesary number of temporary files (cluster limitiation) so we need to do it in multiple batches and then remerge
+    SamLst=$OutNam.samples.list
+    grep -m 1 "^#CHROM" $VcfFil | cut -f 10- | tr '\t' '\n' > $SamLst
+    SamLen=`cat $SamLst | wc -l`
+    if [[ $SamLen -lt 1000 ]]; then
+        vcftools --vcf $VcfFil --plink --out $BbfNam.tmp
+        plink --file $BbfNam.tmp --make-bed --out $BbfNam
+    else
+        while [[ $SamLen -gt 0 ]]; do
+            TmpSams=$SamLst.tmp
+            head -n 1000 $SamLst > $TmpSams
+            vcftools --vcf $VcfFil --keep $TmpSams --plink --out $BbfNam.tmp.$SamLen
+            plink --file $BbfNam.tmp.$SamLen --make-bed --out $BbfNam.tmp.$SamLen
+            tail -n +1001 $SamLst > $SamLst.2
+            mv -f $SamLst.2 $SamLst
+            SamLen=`cat $SamLst | wc -l`
+            rm -f $TmpSams
+        done
+        ls $BbfNam.tmp.*bed | sed s/.bed//g > $BbfNam.tmp.splitlist
+        plink --merge-list $BbfNam.tmp.splitlist --make-bed --out $BbfNam
+        rm -f $BbfNam.tmp.splitlist
+    fi
+    rm -f $BbfNam.tmp* $SamLst
     echo
     echo "------------------------------------------------------------------------"
     echo
-    awk '{ gsub( /-9$/, "2"); print }' $BbfNam.fam > $BbfNam.fam.temp; mv $BbfNam.fam.temp $BbfNam.fam
+    #change -9 in the fam to 2
+    awk '{ gsub( /-9$/, "2"); print }' $BbfNam.fam > $BbfNam.fam.temp
+    mv -f $BbfNam.fam.temp $BbfNam.fam
 else
     BbfNam=`readlink -f $InpFil`
     BbfNam=${BbfNam/.bed/}
@@ -75,17 +98,17 @@ if [[ "$SamOnly" == "false" ]]; then
         echo
     done
 
-    ls | grep -E "HAPMAPTEMP.+[dm]$" | paste - - - > HapMap_merge-list.list
+    ls HAPMAPTEMP*bed | sed s/.bed//g > HAPMAPTEMP_merge-list.list
 
     HapMapDat=$OutNam"_HapMapData"
-    plink --merge-list HapMap_merge-list.list --make-bed --noweb --out $HapMapDat
+    plink --merge-list HAPMAPTEMP_merge-list.list --make-bed --noweb --out $HapMapDat
     echo
     echo "------------------------------------------------------------------------"
     echo
     
     rm -f *HAPMAPTEMP*
 
-    #HapMap data is b36 so update map before merging
+    ###HapMap data is b36 so update map before merging
     cut -f 2,4 $BbfNam.bim > update_map.tab
     plink --bfile $HapMapDat --update-map update_map.tab --make-bed --noweb --out $HapMapDat
     echo
@@ -94,7 +117,7 @@ if [[ "$SamOnly" == "false" ]]; then
     
     #change -9 in fam to 1 
     awk '{ gsub( /-9$/, "1"); print }' $HapMapDat.fam > $HapMapDat.fam.temp
-    mv $HapMapDat.fam.temp $HapMapDat.fam
+    mv -f $HapMapDat.fam.temp $HapMapDat.fam
 
 
     # Merge data:
@@ -104,17 +127,20 @@ if [[ "$SamOnly" == "false" ]]; then
     echo "------------------------------------------------------------------------"
     echo
     
-    #check for mismatched snps and exclude and remerge if necessary
-
-    if [[ -e $EigDat-merge.missnp ]]; then
+    #check for mismatched snps and multiple position/chr snps and exclude and remerge if necessary
+    grep "Warning: Multiple [cp]" Combined_data_for_eigenstrat.log | sed s/.*\ \'//g | sed s/\'.*//g > ExcludeSNPs.list
+    
+    cat $EigDat-merge.missnp >> ExcludeSNPs.list
+    
+    if [[ -s ExcludeSNPs.list ]]; then
         echo
         echo "------------------------------------------------------------------------"
         echo
-        plink --bfile $HapMapDat --exclude $EigDat-merge.missnp --make-bed --noweb --out $HapMapDat
+        plink --bfile $HapMapDat --exclude ExcludeSNPs.list --make-bed --noweb --out $HapMapDat
         echo
         echo "------------------------------------------------------------------------"
         echo
-        plink --bfile $BbfNam --bmerge $HapMapDat.bed $HapMapDat.bim $HapMapDat.fam --exclude $EigDat-merge.missnp --geno 0.05 --make-bed --noweb --out $EigDat
+        plink --bfile $BbfNam --bmerge $HapMapDat.bed $HapMapDat.bim $HapMapDat.fam --geno 0.05 --make-bed --allow-no-sex --out $EigDat
     fi
 else
     EigDat=$BbfNam

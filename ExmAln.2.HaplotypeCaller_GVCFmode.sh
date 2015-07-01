@@ -104,6 +104,7 @@ StepCmd="java -Xmx7G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -rf BadCigar
  $infofields
  --filter_mismatching_base_and_quals
+ --interval_padding 100
  -log $GatkLog" #command to be run
 funcGatkAddArguments # Adds additional parameters to the GATK command depending on flags (e.g. -B or -F)
 funcRunStep

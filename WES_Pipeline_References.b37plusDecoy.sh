@@ -12,7 +12,7 @@ export BUILD="b37" # shorthand for build
 export DBSNP="$EXOMRES/references/b37/dbsnp_137.b37.vcf" # dbSNP vcf from GATK
 export INDEL="$EXOMRES/references/b37/Mills_and_1000G_gold_standard.indels.b37.vcf" # Gold standard INDEL reference from GATK
 export INDEL1KG="$EXOMRES/references/b37/1000G_phase1.indels.b37.vcf" # INDEL reference from 1000 genomes
-export REF="$EXOMRES/references/hg19plusDecoy/hs37d5.fa" # UCSC hg19 build with decoy
+export REF="$EXOMRES/references/b37/human_g1k_v37_decoy.fasta" # human 1000 genome assembly from GATK
 export HAPMAP="$EXOMRES/references/b37/hapmap_3.3.b37.vcf" # hapmap vcf from GATK
 export TGVCF="$EXOMRES/references/b37/1000G_omni2.5.b37.vcf" 
 export ONEKG="$EXOMRES/references/b37/1000G_phase1.snps.high_confidence.b37.vcf" # 1000 genome SNPs vcf
@@ -35,3 +35,4 @@ export BigTgt="$EXOMRES/CaptureKitBeds/custom_intervals/FullIntervals.bed"
 export RefSeq="$EXOMRES/CaptureKitBeds/Target_RefSeq_Exon_UCSC.bed"
 export VCRv2="$EXOMRES/CaptureKitBeds/Nimblegen_VCRome_v2.hg19.bed"
 export TGTCODES="AgtV2:AgtV4:AgtV5:AgtV5UTR:NbgV2:NbgV3:IllTS:BigTgt:RefSeq:VCRv2"
+

@@ -152,14 +152,15 @@ for WhichCode in CodingTypes:
                         else:
                             Novel=True
                         
-                        AllList=GT.split("/")
-                        if "0" in AllList:
+                        AllList=set(GT.split("/"))
+                        if len(AllList) == 2:
                             Heterozygous=True
                         else:
                             Homozygous=True
                         #Get the alternate allele. Only use the first alternate allele in cases where the sample has two different variants (e.g. 1/2)                        
                         AltAllele=GT.split("/")
-                        if "0" in AltAllele: AltAllele.remove("0")
+                        if "0" in AltAllele: 
+                            AltAllele.remove("0")
                         AltAllele=AltAllele[0]
                         AlNum=int(AltAllele)-1
                         

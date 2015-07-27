@@ -66,7 +66,7 @@ source $EXOMPPLN/exome.lib.sh #library functions begin "func" #library functions
 #Set local Variables
 ArrNum=$SGE_TASK_ID
 funcFilfromList #if the input is a list get the appropriate input file for this job of the array --> $InpFil
-VcfFil=`readlink -f $InpFil` #resolve absolute path to bam
+VcfFil=`readlink -f $InpFil` #resolve absolute path to vcf
 HapChec=$(head -n20 $VcfFil | grep "HaplotypeCaller" | wc -l) #check which VC tool was used
 if [[ $HapChec -eq 1 ]]; then
     InfoFields="-an DP -an QD -an FS -an MQRankSum -an ReadPosRankSum"
@@ -207,6 +207,11 @@ VcfFil=$VcfNam.hardfiltered.vcf
 StepName="Get VCF stats"
 StepCmd="python $EXOMPPLN/ExmPY.VCF_summary_Stats.py -v $VcfFil -o ${VcfFil/vcf/stats.tsv}"
 funcRunStep
+
+#Call next steps of pipeline if requested
+NextJob="Recalibrate Variant Quality"
+QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmVC.5.MakeKinTestFilesFromVCF.sh -i $VcfFil -l $LogFil"
+funcPipeLine
 
 #End Log
 funcWriteEndLog

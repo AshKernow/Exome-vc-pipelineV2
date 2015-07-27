@@ -11,6 +11,7 @@ latestLJB=ljb26_all
 latestESPall=esp6500siv2_all
 latestESPaa=esp6500siv2_aa
 latestESPea=esp6500siv2_ea
+latestCOMIC=cosmic70
 
 cd $AnnovarDirectory
 
@@ -66,6 +67,10 @@ case $dbToDownload in
     13)
         nam="Download: Cadd full "
         cmd="perl annotate_variation.pl -downdb -buildver hg19 -webfrom annovar clinvar_20150330 humandb/"
+        ;;
+    14)
+        nam="Download: COSMIC "
+        cmd="perl annotate_variation.pl -downdb -buildver hg19 -webfrom annovar $latestCOMIC humandb/"
         ;;
 esac
 

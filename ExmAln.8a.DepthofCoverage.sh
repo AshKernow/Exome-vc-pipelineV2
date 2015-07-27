@@ -27,12 +27,13 @@
 
 #set default arguments
 usage="
- (-t <X>-<Y> [if providing a list]) ExmAln.8a.DepthofCoverage.sh -i <InputFile> -r <reference_file> -t <targetfile> -l <logfile> -GIQH
+ (-t <X>-<Y> [if providing a list]) ExmAln.8a.DepthofCoverage.sh -i <InputFile> -r <reference_file> -t <targetfile> -l <logfile> -DCBH
 
      -i (required) - Path to Bam file or \".list\" file containing a multiple paths
      -r (required) - shell file containing variables with locations of reference files and resource directories
      -t (required) - Exome capture kit targets bed file (must end .bed for GATK compatability)
      -l (optional) - Log file
+     -D (flag) - keep full Depth of Coverage file
      -C (flag) - Allow BadCigar - see GATK documentation - allows reads that GATK interprets as indicating a malformed file, e.g. reads starting with a deletion
      -B (flag) - Prevent GATK from phoning home
      -H (flag) - echo this message and exit
@@ -40,14 +41,16 @@ usage="
 
 BadCigar="false"
 BadEt="false"
+FullDoC="false"
 
 #get arguments
-while getopts i:r:t:l:CBH opt; do
+while getopts i:r:t:l:DCBH opt; do
     case "$opt" in
         i) InpFil="$OPTARG";;
         r) RefFil="$OPTARG";; 
         t) TgtBed="$OPTARG";; 
         l) LogFil="$OPTARG";;
+        D) FullDoC="true";;
         C) BadCigar="true";;
         B) BadET="true";;
         H) echo "$usage"; exit;;
@@ -102,4 +105,4 @@ funcRunStep
 funcWriteEndLog
 
 #CleanUp
-rm -rf $BamNam.DoC
+if [[ "$FullDoC" == "false" ]]; then rm -rf $BamNam.DoC; fi

@@ -102,7 +102,7 @@ rm -f TEMP.$VcfFil.recode.vcf
 ##Generate Annotation table
 # A note regarding the annotation of multi-allelic variants: If annnovar uses "." as the NA string whilst building the annotation table (i.e. to indicate that there is no annotation for an allele), vcftools' vcf-annotate correctly ignores the annotation and adds nothing to the INFO field. For variants with multiple alternate alleles, we want to add a "." to the vcf INFO field to indicate missing data for those alternates where some alleles have annotation, i.e. e.g  "...;SIFTscr=1.234,.;..." to indicate a SIFT score for the first alternate allele and no annotation for the second. With a "." in the annovar table for the second allele we would just get "...;SIFTscr=1.234;...". Therefore we set the NA string to "%%%". The "%%%" string will be added to vcf by vcf-annotate ("...;SIFTscr=1.234,%%%;...") and then we can use sed to replace it with ".". The only problem then is that we would get "...;SIFTscr=.,.;..." for variants with no annotation at all and we don't want that, so an R script is used first to replace the "%%%" with "." in the annovar annotation table for variants where all alleles lack a particular annotation.
 StepName="Build Annotation table using ANNOVAR"
-StepCmd="table_annovar.pl $TmpVar $ANNHDB --buildver hg19 --remove -protocol refGene,esp6500siv2_all,esp6500siv2_aa,esp6500siv2_ea,1000g2014oct_all,1000g2014oct_eur,1000g2014oct_amr,1000g2014oct_eas,1000g2014oct_afr,1000g2014oct_sas,exac03,ljb26_all,caddgt10,caddindel,genomicSuperDups -operation g,f,f,f,f,f,f,f,f,f,f,f,f,f,r -otherinfo  -nastring %%%  --outfile $AnnFil"
+StepCmd="table_annovar.pl $TmpVar $ANNHDB --buildver hg19 --remove -protocol refGene,esp6500siv2_all,esp6500siv2_aa,esp6500siv2_ea,1000g2014oct_all,1000g2014oct_eur,1000g2014oct_amr,1000g2014oct_eas,1000g2014oct_afr,1000g2014oct_sas,exac03,ljb26_all,caddgt10,caddindel,cosmic70,genomicSuperDups -operation g,f,f,f,f,f,f,f,f,f,f,f,f,f,f,r -otherinfo  -nastring %%%  --outfile $AnnFil"
 if [[ "$FullCadd" == "true" ]]; then 
     StepCmd=${StepCmd/caddgt10/cadd}
     echo "  Using full CADD database..." >> $TmpLog
@@ -140,14 +140,14 @@ StepCmd="head -n 1 $AnnFil > $AnnFil.tempheader;
 tail -n+2 $AnnFil | awk '{gsub( / /, \"\"); print}' | awk '{gsub( /;/, \",\"); print}' | awk '{gsub( /=/, \":\"); print}' >> $AnnFil.tempheader; 
 mv $AnnFil.tempheader $AnnFil; 
 bgzip $AnnFil; 
-tabix -S 1 -s 58 -b 59 -e 59 $AnnFil.gz"
+tabix -S 1 -s 59 -b 60 -e 60 $AnnFil.gz"
 funcRunStep
 
 
 #Incorporate annovar annotations into vcf with vcftools
 StepName="Incorporate annovar annotations into vcf with vcftools"
 StepCmd="cat $InpFil | vcf-annotate -a $AnnFil.gz 
- -c -,-,-,-,-,-,-,-,INFO/VarClass,INFO/AAChange,INFO/ESPfreq,INFO/ESP.aa.freq,INFO/ESP.ea.freq,INFO/1KGfreq,INFO/1KG.eur.freq,INFO/1KG.amr.freq,INFO/1KG.eas.freq,INFO/1KG.afr.freq,INFO/1KG.sas.freq,INFO/ExACfreq,INFO/ExAC.afr.freq,INFO/ExAC.amr.freq,INFO/ExAC.eas.freq,INFO/ExAC.fin.freq,INFO/ExAC.nfe.freq,INFO/ExAC.oth.freq,INFO/ExAC.sas.freq,INFO/SIFTscr,INFO/SIFTprd,INFO/PP2.hdiv.scr,INFO/PP2.hdiv.prd,INFO/PP2.hvar.scr,INFO/PP2.hvar.prd,-,-,INFO/MutTscr,INFO/MutTprd,INFO/MutAscr,INFO/MutAprd,-,-,INFO/MetaSVMscr,INFO/MetaSVMprd,-,-,-,-,-,INFO/GERP,-,INFO/PhyloP,INFO/SiPhy,INFO/CADDraw,INFO/CADDphred,INFO/CADDInDelraw,INFO/CADDInDelphred,-,CHROM,POS,-,REF,ALT
+ -c -,-,-,-,-,-,-,-,INFO/VarClass,INFO/AAChange,INFO/ESPfreq,INFO/ESP.aa.freq,INFO/ESP.ea.freq,INFO/1KGfreq,INFO/1KG.eur.freq,INFO/1KG.amr.freq,INFO/1KG.eas.freq,INFO/1KG.afr.freq,INFO/1KG.sas.freq,INFO/ExACfreq,INFO/ExAC.afr.freq,INFO/ExAC.amr.freq,INFO/ExAC.eas.freq,INFO/ExAC.fin.freq,INFO/ExAC.nfe.freq,INFO/ExAC.oth.freq,INFO/ExAC.sas.freq,INFO/SIFTscr,INFO/SIFTprd,INFO/PP2.hdiv.scr,INFO/PP2.hdiv.prd,INFO/PP2.hvar.scr,INFO/PP2.hvar.prd,-,-,INFO/MutTscr,INFO/MutTprd,INFO/MutAscr,INFO/MutAprd,-,-,INFO/MetaSVMscr,INFO/MetaSVMprd,-,-,-,-,-,INFO/GERP,-,INFO/PhyloP,INFO/SiPhy,INFO/CADDraw,INFO/CADDphred,INFO/CADDInDelraw,INFO/CADDInDelphred,INFO/COSMIC,-,CHROM,POS,-,REF,ALT
  -d key=INFO,ID=VarClass,Number=1,Type=String,Description='Mutational Class'
  -d key=INFO,ID=AAChange,Number=1,Type=String,Description='Amino Acid change'
  -d key=INFO,ID=ESPfreq,Number=1,Type=Float,Description='Exome Sequencing Project 6500 alternative allele frequency'
@@ -186,14 +186,15 @@ StepCmd="cat $InpFil | vcf-annotate -a $AnnFil.gz
  -d key=INFO,ID=CADDraw,Number=1,Type=Float,Description='Whole-genome raw CADD score'
  -d key=INFO,ID=CADDphred,Number=1,Type=Float,Description='Whole-genome phred-scaled CADD score'
  -d key=INFO,ID=CADDInDelraw,Number=1,Type=Float,Description='Whole-genome raw CADD InDel score'
- -d key=INFO,ID=CADDInDelphred,Number=1,Type=Float,Description='Whole-genome phred-scaled CADD InDel score' > $VcfFilAnn"
+ -d key=INFO,ID=CADDInDelphred,Number=1,Type=Float,Description='Whole-genome phred-scaled CADD InDel score'
+ -d key=INFO,ID=COSMIC,Number=1,Type=String,Description='COSMIC entry ID and occurence description' > $VcfFilAnn"
 funcRunStep
 VcfFil=$VcfFilAnn
 
 #for Function, gene name and Segmental duplications we only want to annotate per locus not per an allele so we make a separate table:
 StepName="Make per locus annotation table"
-StepCmd="gunzip -c $AnnFil | cut -f 1,2,3,4,5,6,7,57-62 | head -n 1 > $AnnFil.bylocus ; 
-gunzip -c $AnnFil | cut -f 1,2,3,4,5,6,7,57-62 | tail -n +2 | awk '!a[\$9\$10]++' >> $AnnFil.bylocus ; 
+StepCmd="gunzip -c $AnnFil | cut -f 1,2,3,4,5,6,7,58-63 | head -n 1 > $AnnFil.bylocus ; 
+gunzip -c $AnnFil | cut -f 1,2,3,4,5,6,7,58-63 | tail -n +2 | awk '!a[\$9\$10]++' >> $AnnFil.bylocus ; 
 bgzip $AnnFil.bylocus ;
 tabix -S 1 -s 9 -b 10 -e 10 $AnnFil.bylocus.gz"
 funcRunStep
@@ -208,7 +209,7 @@ StepCmd="cat $VcfFil | vcf-annotate -a $AnnFil.bylocus.gz
 sed -i 's/%%%/./g' $VcfFilAnn.ann2"
 funcRunStep 
 mv $VcfFilAnn.ann2 $VcfFil
-rm -f $AnnFil.bylocus*
+#rm -f $AnnFil.bylocus*
 
 #Get snpEff annotations
 StepName="Get snpEff annotations"
@@ -230,10 +231,10 @@ StepCmd="java -Xmx5G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
  -log $GatkLog" #command to be run
 funcGatkAddArguments # Adds additional parameters to the GATK command depending on flags (e.g. -B or -F)
 ###funcRunStep
-#rm $VcfFilAnn
+##rm $VcfFilAnn
 #VcfFil=$VcfFilSnF
 ## Note GATK throws a lot of warnings related to SnpEff annotations that it doesn't like. 
-## e.g. WARN  14:55:15,040 SnpEff - Skipping malformed SnpEff effect field at 10:100184062. Error was: "SPLICE_SITE_REGION is not a recognized effect type". Field was: "SPLICE_SITE_REGION(LOW||||HPS1|processed_transcript|CODING|ENST00000478087|7)"
+## e.g. WARN  14:55:15,040 SnpEff - Skipping malfo#rmed SnpEff effect field at 10:100184062. Error was: "SPLICE_SITE_REGION is not a recognized effect type". Field was: "SPLICE_SITE_REGION(LOW||||HPS1|processed_transcript|CODING|ENST00000478087|7)"
 ## They don't effect the annotations of the other variants. 
 
 #Call next steps of pipeline if requested

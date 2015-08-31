@@ -120,6 +120,10 @@ if [[ "$PipeLine" == "true" ]]; then
     echo "    "$QsubCmd  >> $TmpLog
     eval $QsubCmd >> $TmpLog
     echo "----------------------------------------------------------------" >> $TmpLog
+else
+    echo "- To start $NextJob run the following command:" >> $TmpLog
+    echo "    "$QsubCmd  >> $TmpLog
+    echo "----------------------------------------------------------------" >> $TmpLog
 fi
 }
 #-------------------------------------------------------------------------------------------------------

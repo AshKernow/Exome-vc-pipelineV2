@@ -67,13 +67,13 @@ source $EXOMPPLN/exome.lib.sh #library functions begin "func" #library functions
 ArrNum=$SGE_TASK_ID
 funcFilfromList #if the input is a list get the appropriate input file for this job of the array --> $InpFil
 VcfFil=`readlink -f $InpFil` #resolve absolute path to vcf
-HapChec=$(head -n20 $VcfFil | grep "HaplotypeCaller" | wc -l) #check which VC tool was used
-if [[ $HapChec -eq 1 ]]; then
+HapChec=$(less $VcfFil | head -n 20 | grep "HaplotypeCaller" | wc -l) #check which VC tool was used
+if [[ $HapChec -gt 0 ]]; then
     InfoFields="-an DP -an QD -an FS -an MQRankSum -an ReadPosRankSum"
 else
     InfoFields="-an DP -an QD -an FS -an MQRankSum -an ReadPosRankSum -an HaplotypeScore"
 fi
-VcfNam=`basename $VcfFil | sed s/.vcf// | sed s/.list//` #a name to use for the various files
+VcfNam=`basename $VcfFil | sed s/.gz$// | sed s/.vcf$// | sed s/.annotated$// | sed s/.list//` #basename for outputs
 if [[ -z "$LogFil" ]];then LogFil=$VcfNam.VQSR.log; fi # a name for the log file
 GatkLog=$VcfNam.gatklog #a log for GATK to output to, this is then trimmed and added to the script log
 TmpLog=$VcfNam.VQSR.temp.log #temporary log file 
@@ -123,7 +123,7 @@ StepCmd="java -Xmx9G -Djava.io.tmpdir=$TmpDir -jar $GATKJAR
 funcGatkAddArguments # Adds additional parameters to the GATK command depending on flags (e.g. -B or -F)
 if [[ "$NoRecal" == "false" ]]; then 
     funcRunStep
-    rm -f $VcfFil $VcfFil.idx
+    rm -f $VcfFil $VcfFil.tbi
     VcfFil=$VcfNam.recal_snps.vcf
 fi
 
@@ -203,14 +203,23 @@ funcRunStep
 rm $VcfFil $VcfFil.idx
 VcfFil=$VcfNam.hardfiltered.vcf
 
-#Get VCF stats with python script
-StepName="Get VCF stats"
-StepCmd="python $EXOMPPLN/ExmPY.VCF_summary_Stats.py -v $VcfFil -o ${VcfFil/vcf/stats.tsv}"
+#gzip and index
+StepName="Gzip the vcf and index" # Description of this step - used in log
+StepCmd="bgzip $VcfFil; tabix -f -p vcf $VcfFil.gz"
 funcRunStep
+rm $VcfFil $VcfFil.idx
+VcfFil=$VcfFil.gz
+
 
 #Call next steps of pipeline if requested
 NextJob="Recalibrate Variant Quality"
 QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmVC.5.MakeKinTestFilesFromVCF.sh -i $VcfFil -l $LogFil"
+funcPipeLine
+
+#Get VCF stats with python script
+PipeLine="true"
+NextJob="Get VCF stats"
+QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmVC.6.GetVCFStats.sh -i $VcfFil -l $LogFil"
 funcPipeLine
 
 #End Log

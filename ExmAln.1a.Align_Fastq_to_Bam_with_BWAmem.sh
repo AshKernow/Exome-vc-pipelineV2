@@ -138,6 +138,8 @@ rm $SrtFil ${SrtFil/bam/bai} #remove the "Sorted bam"
 NextJob="Run Genotype VCF"
 QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.2.HaplotypeCaller_GVCFmode.sh -i $DdpFil -r $RefFil -t $TgtBed -l $LogFil -B"
 funcPipeLine
+#Always do the BAM stats
+PipeLine="true"
 NextJob="Get basic bam metrics"
 QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmAln.3a.Bam_metrics.sh -i $DdpFil -r $RefFil -l $LogFil"
 funcPipeLine

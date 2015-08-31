@@ -2,7 +2,7 @@
 
 
 # this script takes as its input a vcf file and outputs a tab delimited containing various stats for each sample in the vcf, e.g. number of SNVs, number of InDels Ti/Tv ratios etc.
-
+import gzip
 from optparse import OptionParser
 parser = OptionParser()
 # Basic Input Files, required
@@ -16,7 +16,7 @@ parser.add_option("-F", "--filter", action='store_true', dest="FilterVars", help
 
 OutFile=str(options.OutputFileName)
 if not OutFile.endswith('.tsv'):
- OutFile+='stats.tsv'
+ OutFile+='.stats.tsv'
 Output=open(OutFile,'w')
 #MigFil=open('TESTLog.tsv','w')
 #MigHeader=['Sample','CHR', 'Pos', 'REF', 'ALT', 'GT', 'Exon', 'Class', 'Heterozygous', 'Homozygous' 'UnCalled', 'Indel', 'SNV', 'INFO']
@@ -25,7 +25,13 @@ Output=open(OutFile,'w')
 
 FilterVariants=options.FilterVars
 
-VCFfile="MIPs_81.rawvariants.Ann.hardfiltered.vcf"
+FilTyp=str(options.VCFfile)
+FilTyp=FilTyp.split(".")
+FilTyp=str(FilTyp[-1])
+if FilTyp != 'gz'and FilTyp != 'vcf':
+    print "Incorrect input file type"
+    sys.exit(1)
+
 Nucleotides=['A','C','G','T']
 MutUnknown=['unknown']
 MutSilent=['synonymousSNV']
@@ -59,7 +65,10 @@ Rare=False
 
 for WhichCode in CodingTypes:
     print WhichCode
-    VCF=open(options.VCFfile,'r')
+    if FilTyp == 'gz':
+        VCF=gzip.open(options.VCFfile,'r')
+    elif FilTyp == 'vcf':
+        VCF=open(options.VCFfile,'r')
     # Read VCF file
     for line in VCF:
         line=line.strip()

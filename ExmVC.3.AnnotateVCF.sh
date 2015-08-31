@@ -69,8 +69,7 @@ source $EXOMPPLN/exome.lib.sh #library functions begin "func" #library functions
 ArrNum=$SGE_TASK_ID
 funcFilfromList #if the input is a list get the appropriate input file for this job of the array --> $InpFil
 VcfFil=$InpFil #input vcf file
-VcfNam=`basename $VcfFil`
-VcfNam=${VcfNam/.vcf/} #basename for outputs
+VcfNam=`basename $VcfFil | sed s/.gz$// | sed s/.vcf$// | sed s/.rawvariants$//` #basename for outputs
 if [[ -z $LogFil ]]; then LogFil=$VcfNam.AnnVCF.log; fi # a name for the log file
 TmpLog=$VcfNam.AnnVCF.temp.log #temporary log file
 TmpVar=$VcfNam.tempvar
@@ -85,17 +84,21 @@ TmpDir=$VcfNam.AnnVCF.tempdir; mkdir -p $TmpDir #temporary directory
 GatkLog=$VcfNam.gatklog #a log for GATK to output to, this is then trimmed and added to the script log
 infofields="-A AlleleBalance -A BaseQualityRankSumTest -A Coverage -A HaplotypeScore -A HomopolymerRun -A MappingQualityRankSumTest -A MappingQualityZero -A QualByDepth -A RMSMappingQuality -A SpanningDeletions -A FisherStrand -A InbreedingCoeff" #Annotation fields for GATK to output into vcf files
 
+#check the vcf file to see if it is zipped 
+FilTyp=${VcfFil##*.}
+
 #Start Log File
 ProcessName="Annotate VCF" # Description of the script - used in log
 funcWriteStartLog
 
 ##Convert VCF to ANNOVAR input file using ANNOVAR - use a trimmed vcf to all possible alternate alleles using the withfreq flag (using all samples slows this down considerably as annovar calculated the allele frequencies)
 StepName="Convert VCF to ANNOVAR input file using ANNOVAR"
-OneSam=`grep -m 1 ^#CHROM $VcfFil | cut -f 10`
+OneSam=`less $VcfFil | grep -m 1 ^#CHROM | cut -f 10`
 StepCmd="vcftools --vcf $VcfFil --indv $OneSam --recode --out TEMP.$VcfFil;
  convert2annovar.pl -includeinfo -allsample -withfreq -format vcf4 TEMP.$VcfFil.recode.vcf -outfile $TmpVar;
  cut -f 1-5,9-13 $TmpVar > $TmpVar.2;
  mv $TmpVar.2 $TmpVar"
+if [[ $FilTyp == "gz" ]]; then StepCmd=`echo $StepCmd | sed s/--vcf/--gzvcf/g`; fi
 funcRunStep
 rm -f TEMP.$VcfFil.recode.vcf
 
@@ -146,7 +149,7 @@ funcRunStep
 
 #Incorporate annovar annotations into vcf with vcftools
 StepName="Incorporate annovar annotations into vcf with vcftools"
-StepCmd="cat $InpFil | vcf-annotate -a $AnnFil.gz 
+StepCmd="less $InpFil | vcf-annotate -a $AnnFil.gz 
  -c -,-,-,-,-,-,-,-,INFO/VarClass,INFO/AAChange,INFO/ESPfreq,INFO/ESP.aa.freq,INFO/ESP.ea.freq,INFO/1KGfreq,INFO/1KG.eur.freq,INFO/1KG.amr.freq,INFO/1KG.eas.freq,INFO/1KG.afr.freq,INFO/1KG.sas.freq,INFO/ExACfreq,INFO/ExAC.afr.freq,INFO/ExAC.amr.freq,INFO/ExAC.eas.freq,INFO/ExAC.fin.freq,INFO/ExAC.nfe.freq,INFO/ExAC.oth.freq,INFO/ExAC.sas.freq,INFO/SIFTscr,INFO/SIFTprd,INFO/PP2.hdiv.scr,INFO/PP2.hdiv.prd,INFO/PP2.hvar.scr,INFO/PP2.hvar.prd,-,-,INFO/MutTscr,INFO/MutTprd,INFO/MutAscr,INFO/MutAprd,-,-,INFO/MetaSVMscr,INFO/MetaSVMprd,-,-,-,-,-,INFO/GERP,-,INFO/PhyloP,INFO/SiPhy,INFO/CADDraw,INFO/CADDphred,INFO/CADDInDelraw,INFO/CADDInDelphred,INFO/COSMIC,-,CHROM,POS,-,REF,ALT
  -d key=INFO,ID=VarClass,Number=1,Type=String,Description='Mutational Class'
  -d key=INFO,ID=AAChange,Number=1,Type=String,Description='Amino Acid change'
@@ -159,7 +162,6 @@ StepCmd="cat $InpFil | vcf-annotate -a $AnnFil.gz
  -d key=INFO,ID=1KG.eas.freq,Number=1,Type=Float,Description='1000 genome alternative allele frequency - East Asian'
  -d key=INFO,ID=1KG.afr.freq,Number=1,Type=Float,Description='1000 genome alternative allele frequency - African'
  -d key=INFO,ID=1KG.sas.freq,Number=1,Type=Float,Description='1000 genome alternative allele frequency - South Asian'
- -d key=INFO,ID=ExACfreq,Number=1,Type=Float,Description='Exome Aggregatation Consortium alternative allele frequency - all populations'
  -d key=INFO,ID=ExACfreq,Number=1,Type=Float,Description='Exome Aggregatation Consortium alternative allele frequency - all populations'
  -d key=INFO,ID=ExAC.afr.freq,Number=1,Type=Float,Description='Exome Aggregatation Consortium alternative allele frequency - African'
  -d key=INFO,ID=ExAC.amr.freq,Number=1,Type=Float,Description='Exome Aggregatation Consortium alternative allele frequency - Latino'
@@ -237,6 +239,15 @@ funcGatkAddArguments # Adds additional parameters to the GATK command depending 
 ## e.g. WARN  14:55:15,040 SnpEff - Skipping malfo#rmed SnpEff effect field at 10:100184062. Error was: "SPLICE_SITE_REGION is not a recognized effect type". Field was: "SPLICE_SITE_REGION(LOW||||HPS1|processed_transcript|CODING|ENST00000478087|7)"
 ## They don't effect the annotations of the other variants. 
 
+mv $VcfFil $VcfFilOut
+VcfFil=$VcfFilOut
+
+#gzip and index
+StepName="Gzip the vcf and index" # Description of this step - used in log
+StepCmd="bgzip $VcfFil; tabix -f -p vcf $VcfFil.gz"
+funcRunStep
+VcfFil=$VcfFil.gz
+
 #Call next steps of pipeline if requested
 NextJob="Recalibrate Variant Quality"
 QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmVC.4.RecalibrateVariantQuality.sh -i $VcfFil -r $RefFil -l $LogFil -P"
@@ -247,4 +258,6 @@ funcPipeLine
 #End Log
 funcWriteEndLog
 
+#Cleanup
 
+rm -f $VcfNam*invalid_input $VcfNam*bylocus*

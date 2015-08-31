@@ -108,6 +108,13 @@ StepName="Output sample list"
 StepCmd="for i in \$(grep -m 1 ^#CHROM $VcfFil | cut -f 10-); do echo \$i >> $VcfNam.vcfheaderline.txt; done"
 funcRunStep
 
+#gzip and index
+StepName="Gzip the vcf and index" # Description of this step - used in log
+StepCmd="bgzip $VcfFil; tabix -f -p vcf $VcfFil.gz"
+funcRunStep
+rm $VcfFil $VcfFil.idx
+VcfFil=$VcfFil.gz
+
 #Call next job
 NextJob="Annotate with Annovar"
 QsubCmd="qsub -o stdostde/ -e stdostde/ $EXOMPPLN/ExmVC.3.AnnotateVCF.sh -i $VcfFil -r $RefFil -l $LogFil -P"

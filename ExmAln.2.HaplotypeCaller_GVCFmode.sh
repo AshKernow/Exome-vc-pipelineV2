@@ -113,6 +113,7 @@ funcRunStep
 StepName="gzip and index the gVCF"
 StepCmd="bgzip $VcfFil; tabix -f -p vcf $VcfFil.gz"
 funcRunStep
+rm $VcfFil.idx
 
 #End Log
 funcWriteEndLog

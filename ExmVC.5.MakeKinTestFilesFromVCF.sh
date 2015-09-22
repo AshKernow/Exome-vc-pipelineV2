@@ -53,6 +53,7 @@ TmpRscript=Temp.rPlotHist.$OutNam.R # temporary R script to generate sex histogr
 TmpRelatScript=Temp.Relatedeness.$OutNam.sh # temporary bash script to run vcftools relatedness2
 TmpMissingScript=Temp.Missingness.$OutNam.sh # temporary bash script to run vcftools missingness
 mkdir -p stdostde # output directory for std error/output from vcftools bash scripts
+mkdir -p KinshipFiles # output directory
 
 SampList=Temp.$OutNam.`date "+%j%y%H%M%N"`.samplist #file to hold list of samples in vcf
 MrgList=Temp.$OutNam.splitplink.merge.list #a file to hold the merge list for plink if it is necessary to convert the vcf in steps
@@ -67,7 +68,7 @@ funcWriteStartLog
 #get relatedness via KING algorithm
 StepName="Get relatedness via KING algorithm in vcftools" # Description of this step - used in log
 echo "#!/bin/bash" > $TmpRelatScript
-echo "vcftools --vcf $VcfFil --relatedness2 --out $OutNam" >> $TmpRelatScript
+echo "vcftools --vcf $VcfFil --relatedness2 --out KinshipFiles/$OutNam" >> $TmpRelatScript
 if [[ $FilTyp == "gz" ]]; then 
     sed s/--vcf/--gzvcf/g $TmpRelatScript > $TmpRelatScript.2
     mv -f $TmpRelatScript.2 $TmpRelatScript
@@ -78,7 +79,7 @@ funcRunStep
 #get missingness for each individual
 StepName="Get missingness with vcftools" # Description of this step - used in log
 echo "#!/bin/bash" > $TmpMissingScript
-echo "vcftools --vcf $VcfFil --missing-indv --out $OutNam" >> $TmpMissingScript
+echo "vcftools --vcf $VcfFil --missing-indv --out KinshipFiles/$OutNam" >> $TmpMissingScript
 if [[ $FilTyp == "gz" ]]; then 
     sed s/--vcf/--gzvcf/g $TmpMissingScript > $TmpMissingScript.2
     mv -f $TmpMissingScript.2 $TmpMissingScript
@@ -96,7 +97,7 @@ if [[ $LEN -lt 1000 ]]; then
     if [[ $FilTyp == "gz" ]]; then StepCmd=`echo $StepCmd | sed s/--vcf/--gzvcf/g`; fi
     funcRunStep
     StepName="Convert ped/map to bed/bim/fam using plink"
-    StepCmd="plink --file Temp.$OutNam --make-bed --out $OutNam"
+    StepCmd="plink --file Temp.$OutNam --make-bed --out KinshipFiles/$OutNam"
     funcRunStep
 else
     split -l 900 $SampList $SampList.split.
@@ -112,25 +113,25 @@ else
     echo "Merge list:" >> $TmpLog
     cat $MrgList >> $TmpLog
     StepName="Merge ped/map split files and convert to bed/bim/fam using plink"
-    StepCmd="plink --merge-list $MrgList --make-bed --out $OutNam"
+    StepCmd="plink --merge-list $MrgList --make-bed --out KinshipFiles/$OutNam"
     funcRunStep
 fi
 
 #split the pseudo-autosomal X into "XY" for sex check
 StepName="Split the pseudo-autosomal X into XY for sex check with plink"
-StepCmd="plink --bfile $OutNam --split-x hg19 --make-bed --out $OutNam"
+StepCmd="plink --bfile KinshipFiles/$OutNam --split-x hg19 --make-bed --out KinshipFiles/$OutNam"
 funcRunStep
 
 #run sex check
 StepName="Run imputation of sex using plink"
-StepCmd="plink --bfile $OutNam --impute-sex --make-bed --out $OutNam.sexcheck"
+StepCmd="plink --bfile KinshipFiles/$OutNam --impute-sex --make-bed --out KinshipFiles/$OutNam.sexcheck"
 funcRunStep
 mv $OutNam.sexcheck.sexcheck $OutNam.sexcheck
 
 
 StepName="Plot histogram of F statistics"
-echo "pdf(\"$OutNam.plink_sexcheck_histogram.pdf\")
- hist(read.table(\"$OutNam.sexcheck\", header=T)[,\"F\"], main=\"$OutNam plink sexcheck - F statistic\", xlab=\"F\")
+echo "pdf(\"KinshipFiles/$OutNam.plink_sexcheck_histogram.pdf\")
+ hist(read.table(\"KinshipFiles/$OutNam.sexcheck\", header=T)[,\"F\"], main=\"$OutNam plink sexcheck - F statistic\", xlab=\"F\")
  dev.off()" > $TmpRscript
 StepCmd="Rscript $TmpRscript"
 funcRunStep
@@ -139,16 +140,16 @@ funcRunStep
 
 #Run IBD with rare variants
 StepName="Run IBD with rare variants using plink"
-StepCmd="plink --bfile $OutNam --maf 0.01 --genome --out $OutNam"
+StepCmd="plink --bfile KinshipFiles/$OutNam --maf 0.01 --genome --out KinshipFiles/$OutNam"
 funcRunStep
 
 #get missingness
 StepName="Get missingness with plink"
-StepCmd="plink --bfile $OutNam --missing --out $OutNam"
+StepCmd="plink --bfile KinshipFiles/$OutNam --missing --out KinshipFiles/$OutNam"
 funcRunStep
 
 #End Log
 funcWriteEndLog
 
 #Clean up
-rm -f Temp.$OutNam.* $OutNam*.sexcheck.* $OutNam*nosex $OutNam.ped $OutNam.map  $OutNam.log $OutNam.lmiss $OutNam*~ $TmpRscript
+rm -f Temp.$OutNam.* $OutNam*.sexcheck.* $OutNam*nosex $OutNam.ped $OutNam.map  $OutNam.log $OutNam.lmiss $OutNam*~ $TmpRscript $TmpRelatScript $TmpMissingScript

@@ -191,7 +191,7 @@ funcRunStep
 
 #Sort the bam file by coordinate
 StepName="Sort Bam using PICARD"
-StepCmd="java -Xmx4G -Djava.io.tmpdir=$TmpDir -jar $PICARD/SortSam.jar
+StepCmd="java -Xmx4G -Djava.io.tmpdir=$TmpDir -jar $PICARD SortSam
  INPUT=$AlnFil
  OUTPUT=$SrtFil
  SORT_ORDER=coordinate
@@ -201,7 +201,7 @@ rm $AlnFil #removed the "Aligned bam"
 
 #Mark the duplicates
 StepName="Mark PCR Duplicates using PICARD"
-StepCmd="java -Xmx4G -Djava.io.tmpdir=$TmpDir -jar $PICARD/MarkDuplicates.jar
+StepCmd="java -Xmx4G -Djava.io.tmpdir=$TmpDir -jar $PICARD MarkDuplicates
  INPUT=$SrtFil
  OUTPUT=$DdpFil
  METRICS_FILE=$DdpFil.dup.metrics.txt

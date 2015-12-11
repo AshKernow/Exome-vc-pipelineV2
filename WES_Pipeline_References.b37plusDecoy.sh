@@ -4,7 +4,7 @@ export EXOMRES="/ifs/scratch/c2b2/af_lab/ads2202/Exome_Seq/resources" # Director
 
 #jar files  and directories for software
 GATKJAR="/ifs/scratch/c2b2/af_lab/ads2202/jar/GenomeAnalysisTK_Current/GenomeAnalysisTK.jar" #Current GATK jar file
-PICARD="/ifs/scratch/c2b2/af_lab/ads2202/jar/picard-tools/" #directory containing Picard jar files
+PICARD="/ifs/scratch/c2b2/af_lab/ads2202/jar/picard-tools/picard.jar" #Picard jar files
 SNPEFF="/ifs/scratch/c2b2/af_lab/ads2202/jar/snpEff/snpEff.jar" # Current snpEff jar file
 
 ## References

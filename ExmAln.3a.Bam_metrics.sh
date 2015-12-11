@@ -77,9 +77,10 @@ funcWriteStartLog
 #Get GC metrics with Picard
 if [[ $ALLmet == "true" ]] || [[ $GCmet == "true" ]]; then
     StepName="Get GC Metrics with Picard" # Description of this step - used in log
-    StepCmd="java -Xmx4G -Djava.io.tmpdir=$TmpDir -jar $PICARD/CollectGcBiasMetrics.jar
+    StepCmd="java -Xmx4G -Djava.io.tmpdir=$TmpDir -jar $PICARD CollectGcBiasMetrics
  INPUT=$BamFil
  OUTPUT=$BamNam.GCbias_detail
+ SUMMARY_OUTPUT=$BamNam.GCbias_summary
  CHART=$BamNam.GCbias.pdf
  REFERENCE_SEQUENCE=$REF
  VALIDATION_STRINGENCY=SILENT
@@ -90,7 +91,7 @@ fi
 #Get Insert size metrics with Picard
 if [[ $ALLmet == "true" ]] || [[ $ISmet == "true" ]]; then
     StepName="Get Insert Size Metrics with Picard" # Description of this step - used in log
-    StepCmd="java -Xmx4G -Djava.io.tmpdir=$TmpDir -jar $PICARD/CollectInsertSizeMetrics.jar
+    StepCmd="java -Xmx4G -Djava.io.tmpdir=$TmpDir -jar $PICARD CollectInsertSizeMetrics
  INPUT=$BamFil
  OUTPUT=$BamNam.InsertSize_detail
  HISTOGRAM_FILE=$BamNam.InsertSize.pdf
@@ -101,7 +102,7 @@ fi
 #Quality Score Distribution
 if [[ $ALLmet == "true" ]] || [[ $QDmet == "true" ]]; then
     StepName="Get Quality Score Distribution from BAM file using PICARD" # Description of this step - used in log
-    StepCmd="java -Xmx4G -Djava.io.tmpdir=$TmpDir -jar $PICARD/QualityScoreDistribution.jar
+    StepCmd="java -Xmx4G -Djava.io.tmpdir=$TmpDir -jar $PICARD QualityScoreDistribution
  INPUT=$BamFil
  OUTPUT=$BamNam.QualityDistr
  CHART_OUTPUT=$BamNam.QualityScoreDistr.pdf

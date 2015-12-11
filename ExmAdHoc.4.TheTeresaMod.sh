@@ -6,6 +6,7 @@
 #D8GSQ5P1:4:1102:10621:68803#0/3    133    1    10009    0    *    =    10009    0    GTTAGGGTTAGGGTTAGGGCTGGG....
 # This causes problems with the bam2fq-->bwa pipeline - the bam2fq does not recoginise the pairs and doesn't interleave them properly and hence bwa then sees them as all singletons.
 #    InpBam - (required) - The bam file to be modified
+#    RefFil - (required) - shell file containing variables with locations of reference files, jar files, and resource directories; see list below for required variables
 #    OutBam - (optional) - A name for the output file. If this is not provided provided \"fixed\" will be added into the original filename.
 #    Help - H - (flag) - get usage information
 
@@ -13,45 +14,59 @@
 # samtools <http://samtools.sourceforge.net/> <http://sourceforge.net/projects/samtools/files/>
 
 
+## This file also requires exome.lib.sh - which contains various functions used throughout the Exome analysis scripts; this file should be in the same directory as this script
+
 ###############################################################
 
 #set default arguments
 usage="
-ExmAdHoc.4.TheTeresaMod.sh -i <InputName> -o <OutputName>
+ExmAdHoc.4.TheTeresaMod.sh -i <InputName> -r <reference_file> -o <OutputName>
 
      -i (required) - Bam file to be modified
+     -r (required) - shell file containing variables with locations of reference files and resource directories
      -o (optional) - Output filename - if not provided \"fixed\" will be added into the original filename
      -H (flag) - echo this message and exit
 "
 
 #get arguments
-while getopts i:o:H opt; do
+while getopts i:o:r:H opt; do
     case "$opt" in
         i) InpBam="$OPTARG";;
+        r) RefFil="$OPTARG";;
         o) OutBam="$OPTARG";;
         H) echo "$usage"; exit;;
     esac
 done
 
 #check all required paramaters present
+if [[ ! -e "$InpFil" ]] || [[ ! -e "$RefFil" ]]; then echo "Missing/Incorrect required arguments"; echo "$usage"; exit; fi
+
+#Call the RefFil to load variables
+RefFil=`readlink -f $RefFil`
+source $RefFil
+
+
+#Load script library
+source $EXOMPPLN/exome.lib.sh #library functions begin "func" #library functions begin "func"
+
+#check all required paramaters present
 if [[ ! -e "$InpBam" ]]; then echo "Missing/Incorrect required arguments"; echo "$usage"; exit; fi
 
-LogFil=${InpBam/.bam/.mod.log}
-echo "Start Modification - $0:`date`" >> $LogFil
-echo "Input Bam: "$InpBam >> $LogFil
+#Set local Variables
+LogFil=${InpBam/.bam/.TeresaMod.log}
+TmpLog=$LogFil.TeresaMod.temp.log #temporary log file
+if [[ -z $OutBam ]]; then OutBam=`basename $InpBam | sed 's/bam$/fixed.bam/'`; fi
 
-#hpc workaround
-#if [[ /bin/hostname==*hpc* ]]; then source $HOME/.bash_profile; fi
 
-if [[ -z $OutBam ]]; then
-    OutBam=`basename $InpBam | sed 's/bam$/fixed.bam/'`
-fi
 
-echo "Output Bam: "$OutBam >> $LogFil
+#Start Log File
+ProcessName="Modify Bam file to remove unwanted trailing characters" # Description of the script - used in log
+funcWriteStartLog
 
-# bam --> sam | use awk to make modification | sam --> bam
-samtools view -h $InpBam | awk 'BEGIN { OFS = "\t" } { gsub(/#0\/3$/,"#0",$1); gsub(/#0\/4$/,"#0",$1); print $0 }' | samtools view -bS - > $OutBam.temp
-mv $OutBam.temp $OutBam
+##Run genomic VCF generation
+StepNam="Modify bam file using samtools"
+StepCmd="samtools view -h $InpBam | 
+ awk 'BEGIN { OFS = \"\t\" } { gsub(/#0\/3\$/,\"#0\",\$1); gsub(/#0\/4\$/,\"#0\",\$1); print $0 }' | 
+ samtools view -bS - > $OutBam"
+echo $StepCmd
 
-echo "Completed bam modification $0:`date`" >> $LogFil
-qstat -j $JOB_ID | grep -E "usage" >> $LogFil
